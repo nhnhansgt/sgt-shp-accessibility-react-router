@@ -1,0 +1,18 @@
+services:
+  # db
+  db:
+    build: ./docker/db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: docker
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+      TZ: "Asia/Ho_Chi_Minh"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/db/sql:/docker-entrypoint-initdb.d
+      - database:/var/lib/mysql:delegated
+
+volumes:
+  database:
