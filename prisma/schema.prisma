@@ -19,6 +19,7 @@ model accessibilities {
   statement  String?   @db.LongText
   app_id     BigInt?
   store_id   BigInt?
+  shop       String?   @db.VarChar(255)
 }
 
 model failed_jobs {

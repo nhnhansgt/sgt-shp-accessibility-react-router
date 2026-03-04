@@ -63,7 +63,8 @@ This document describes how to work with the **existing database schema** withou
 |--------|------|-------------|
 | `id` | BigInt (PK) | Auto-increment ID |
 | `app_id` | BigInt (nullable) | App identifier (no FK relationship) |
-| `store_id` | BigInt (nullable) | Store identifier (no FK relationship) |
+| `store_id` | BigInt (nullable) | Legacy store identifier (retained for compatibility, do not use in new code) |
+| `shop` | VarChar(255) (nullable) | Shop domain (e.g., "store.myshopify.com") - **USE THIS for queries** |
 | `status` | TinyInt | 0 = disabled, 1 = enabled |
 | `icon` | LongText (nullable) | Icon key (e.g., "icon-circle") |
 | `position` | VarChar(256) | Widget position |
@@ -161,12 +162,10 @@ export class AccessibilityRepository {
    * Find accessibility settings by shop domain
    */
   async findByShopDomain(shopDomain: string, appId: number): Promise<Accessibility | null> {
-    const storeId = this.hashShopDomain(shopDomain);
-
     return this.db.accessibilities.findFirst({
       where: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shopDomain,
         deleted_at: null,
       },
     });
@@ -176,12 +175,10 @@ export class AccessibilityRepository {
    * Get or create accessibility record for a shop
    */
   async findOrCreate(shopDomain: string, appId: number): Promise<Accessibility> {
-    const storeId = this.hashShopDomain(shopDomain);
-
     const existing = await this.db.accessibilities.findFirst({
       where: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shopDomain,
         deleted_at: null,
       },
     });
@@ -194,7 +191,7 @@ export class AccessibilityRepository {
     return this.db.accessibilities.create({
       data: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shopDomain,
         status: 0,
         icon: 'icon-circle',
         position: 'bottom-right',
@@ -287,19 +284,6 @@ export class AccessibilityRepository {
     });
   }
 
-  // Helper: Hash shop domain to numeric store_id using FNV-1a
-  private hashShopDomain(shopDomain: string): bigint {
-    let hash = 0xcbf29ce484222325n; // FNV offset basis
-    const prime = 0x100000001b3n;   // FNV prime
-
-    for (let i = 0; i < shopDomain.length; i++) {
-      hash ^= BigInt(shopDomain.charCodeAt(i));
-      hash *= prime;
-    }
-
-    return hash;
-  }
-
   // Helper: Default widget options
   private getDefaultOptions() {
     return {
@@ -336,11 +320,11 @@ export class AccessibilityRepository {
 ### 4.2 Common Query Examples
 
 ```typescript
-// Get accessibility for a shop
+// Get accessibility for a shop (using shop column)
 const accessibility = await prisma.accessibilities.findFirst({
   where: {
     app_id: BigInt(appId),
-    store_id: storeId,
+    shop: shopDomain, // e.g., "store.myshopify.com"
     deleted_at: null,
   },
 });
@@ -391,13 +375,12 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   }
 
   try {
-    const storeId = hashShopDomain(shop);
     const appId = getAppIdFromConfig();
 
     const accessibility = await prisma.accessibilities.findFirst({
       where: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shop, // Direct query using shop column
         status: 1, // Only return enabled widgets
         deleted_at: null,
       },
@@ -425,208 +408,13 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     return json({ error: 'Internal server error' }, { status: 500 });
   }
 };
-
-// FNV-1a hash function (same as repository)
-function hashShopDomain(shop: string): bigint {
-  let hash = 0xcbf29ce484222325n;
-  const prime = 0x100000001b3n;
-
-  for (let i = 0; i < shop.length; i++) {
-    hash ^= BigInt(shop.charCodeAt(i));
-    hash *= prime;
-  }
-
-  return hash;
-}
 ```
 
 ---
 
 ## 6. Billing Status Handling
 
-Since there's no Subscription table, billing is tracked externally via Shopify API:
-
-### 6.1 Application-Layer Billing Check
-
-```typescript
-// app/services/billing.service.ts
-
-export interface BillingStatus {
-  hasActivePlan: boolean;
-  planType?: 'monthly' | 'annual';
-  trialEndsAt?: Date;
-  status: 'none' | 'trial' | 'active' | 'past_due' | 'cancelled';
-}
-
-export class BillingService {
-  /**
-   * Check billing status via Shopify GraphQL API
-   */
-  async checkBillingStatus(admin: AdminApiContext): Promise<BillingStatus> {
-    const query = `
-      query {
-        appInstallation {
-          activeSubscriptions {
-            ... on AppSubscription {
-              id
-              status
-              createdAt
-              name
-              trialDays
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await admin.graphql(query);
-    const data = await response.json();
-
-    const subscriptions = data.data?.appInstallation?.activeSubscriptions || [];
-
-    if (subscriptions.length === 0) {
-      return {
-        hasActivePlan: false,
-        status: 'none',
-      };
-    }
-
-    const subscription = subscriptions[0];
-
-    return {
-      hasActivePlan: true,
-      planType: subscription.name?.toLowerCase().includes('annual') ? 'annual' : 'monthly',
-      status: subscription.status,
-      trialEndsAt: subscription.trialDays
-        ? new Date(Date.now() + subscription.trialDays * 24 * 60 * 60 * 1000)
-        : undefined,
-    };
-  }
-
-  /**
-   * Request payment via Shopify Billing API
-   */
-  async requestPlan(
-    admin: AdminApiContext,
-    planType: 'monthly' | 'annual',
-    returnUrl: string
-  ): Promise<{ confirmUrl: string | null }> {
-    const mutation = `
-      mutation appSubscriptionCreate(
-        $name: String!
-        $returnUrl: URL!
-        $trialDays: Int
-        $test: Boolean
-      ) {
-        appSubscriptionCreate(
-          name: $name
-          returnUrl: $returnUrl
-          trialDays: $trialDays
-          test: $test
-          lineItems: [
-            {
-              plan: {
-                appRecurringPricingDetails: {
-                  price: ${planType === 'monthly' ? '{ amount: 6.99, currencyCode: USD }' : '{ amount: 67.2, currencyCode: USD }'}
-                  interval: ${planType === 'monthly' ? 'EVERY_30_DAYS' : 'ANNUAL'}
-                }
-              }
-            }
-          ]
-        ) {
-          userErrors {
-            field
-            message
-          }
-          confirmationUrl
-          appSubscription {
-            id
-            status
-          }
-        }
-      }
-    `;
-
-    const response = await admin.graphql(mutation, {
-      variables: {
-        name: planType === 'monthly' ? 'Monthly Plan' : 'Annual Plan',
-        returnUrl,
-        trialDays: 14,
-        test: true, // Set to false in production
-      },
-    });
-
-    const data = await response.json();
-    const confirmUrl = data.data?.appSubscriptionCreate?.confirmationUrl;
-
-    return { confirmUrl };
-  }
-}
-```
-
-### 6.2 Protected Route Pattern
-
-```typescript
-// app/routes/app.widgets.tsx
-
-import { redirect, json } from '@shopify/remix-oxygen';
-import { authenticate } from '~/shopify.server';
-import { BillingService } from '~/services/billing.service';
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-
-  // Check billing
-  const billingService = new BillingService();
-  const billingStatus = await billingService.checkBillingStatus(admin);
-
-  if (!billingStatus.hasActivePlan) {
-    // Redirect to plans page if no active plan
-    return redirect('/app/plans');
-  }
-
-  // Get accessibility settings
-  const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
-  const storeId = hashShopDomain(shopDomain);
-
-  const accessibility = await prisma.accessibilities.findFirst({
-    where: {
-      app_id: BigInt(appId),
-      store_id: storeId,
-      deleted_at: null,
-    },
-  });
-
-  return json({
-    billingStatus,
-    accessibility: accessibility ? {
-      ...accessibility,
-      options: accessibility.options ? JSON.parse(accessibility.options) : {},
-    } : null,
-  });
-};
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-
-  // Verify billing before allowing updates
-  const billingService = new BillingService();
-  const billingStatus = await billingService.checkBillingStatus(admin);
-
-  if (!billingStatus.hasActivePlan) {
-    return json({ error: 'No active subscription' }, { status: 403 });
-  }
-
-  // Process form data
-  const formData = await request.formData();
-  // ... handle updates
-
-  return json({ success: true });
-};
-```
-
----
+> **Note:** Billing functionality has been removed and will be implemented in a future update.
 
 ## 7. Validation Patterns (Application Layer)
 
@@ -680,15 +468,6 @@ export function validateAccessibilitySettings(data: unknown) {
 import { validateAccessibilitySettings } from '~/validators/accessibility.validator';
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
-
-  // Verify billing
-  const billingService = new BillingService();
-  const billingStatus = await billingService.checkBillingStatus(admin);
-
-  if (!billingStatus.hasActivePlan) {
-    return json({ error: 'No active subscription' }, { status: 403 });
-  }
 
   const formData = await request.formData();
 
@@ -917,5 +696,6 @@ interface PublicAccessibilityResponse {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.0 | 2026-03-04 | Added `shop` column, removed billing functionality (to be implemented later) |
 | 2.0 | 2025-03-03 | Revised for existing schema constraints - no schema changes |
 | 1.0 | 2025-03-03 | Initial database design (deprecated - proposed new models) |

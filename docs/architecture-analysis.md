@@ -73,20 +73,19 @@
 | **Routing** | React Router flat routes | Template already configured |
 | **State Management** | Server state via loaders | Data always fresh from server |
 | **Data Access** | Repository pattern | Works with existing `accessibilities` table |
-| **Shop Mapping** | FNV-1a hash function | Maps shop domain → `store_id` |
-| **Billing** | Shopify GraphQL API | No DB changes needed |
+| **Shop Mapping** | Direct shop column lookup | Uses `shop` column for queries |
 | **Validation** | Zod schemas | Application-layer validation |
 | **Authentication** | `authenticate.admin()` | Built into template |
 | **UI Components** | Polaris web components | Consistent Shopify look |
+| **Billing** | To be implemented later | Future feature |
 
-### Database Constraint
+### Database Schema
 
-**⚠️ IMPORTANT: NO SCHEMA CHANGES**
-
-- Work with existing `accessibilities` table only
-- Use `app_id` + `store_id` (BigInt, no FK) for lookups
-- Use FNV-1a hash to convert shop domain → `store_id`
-- Billing status from Shopify GraphQL API, not database
+**accessibilities table:**
+- `shop` column (VarChar 255) - Stores shop domain (e.g., "store.myshopify.com")
+- Use `shop` column for direct queries (no FNV-1a hash needed)
+- `store_id` column retained for backward compatibility with legacy database
+- Use `app_id` + `shop` combination for lookups
 
 ---
 
@@ -94,17 +93,15 @@
 
 ```
 app/routes/
-├── app.tsx                        # App layout with dynamic navigation
-├── app._index.tsx                 # Entry → redirect based on billing
-├── app.plans.tsx                  # Plans page (no billing guard)
+├── app.tsx                        # App layout with navigation
+├── app._index.tsx                 # Entry → redirect to dashboard
 ├── app.setup.tsx                  # Quick start dashboard
 ├── app.widgets.tsx                # Widget customization
 ├── app.statement.tsx              # Statement editor
-├── app.support.tsx                # Help & support
-└── app.ExitIframe.tsx             # Billing redirect handler
+└── app.support.tsx                # Help & support
 ```
 
-### Route Flow with Billing Guard
+### Route Flow
 
 ```
 User installs app
@@ -115,47 +112,32 @@ OAuth flow (auth.$.tsx)
 │  app._index.tsx                      │
 │                                      │
 │  1. Get session.shop                 │
-│  2. hashShopDomain(shop) → store_id  │
-│  3. Check billing via GraphQL        │
-│                                      │
-│  IF !hasActivePlan → /app/plans      │
-│  IF hasActivePlan → /app/setup       │
+│  2. Get settings (Repository)        │
+│  3. Redirect to /app/setup           │
 └─────────────────────────────────────┘
       ↓
 ┌─────────────────────────────────────┐
-│  Protected Routes                    │
+│  All Routes                          │
 │  (setup, widgets, statement, support)│
 │                                      │
 │  loader:                             │
 │    1. Authenticate                   │
-│    2. Check billing (GraphQL)        │
-│    3. If !paid → redirect(/plans)    │
-│    4. Get settings (Repository)      │
+│    2. Get settings (Repository)      │
 └─────────────────────────────────────┘
 ```
 
-### Billing Guard Implementation
+### Basic Route Implementation (No Billing)
 
 ```typescript
 // app/routes/app.widgets.tsx
 
-import { redirect, json } from "react-router";
+import { json } from "react-router";
 import { authenticate } from "../shopify.server";
-import { BillingService } from "../services/billing.service";
 import { AccessibilityRepository } from "../repositories/accessibility.repository";
-import { hashShopDomain } from "../utils/hash";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-
-  // Check billing via Shopify GraphQL
-  const billingService = new BillingService();
-  const billingStatus = await billingService.checkBillingStatus(admin);
-
-  if (!billingStatus.hasActivePlan) {
-    return redirect("/app/plans");
-  }
 
   // Get accessibility settings via Repository
   const repository = new AccessibilityRepository(prisma);
@@ -212,12 +194,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 app/components/
 ├── layout/
 │   ├── AppLayout.tsx           # Main app wrapper
-│   ├── BillingBanner.tsx       # Sale banner (conditional)
 │   └── StatusBanner.tsx        # Accessibility status
-│
-├── plans/
-│   ├── PlanCard.tsx            # Pricing card
-│   └── PlanGrid.tsx            # Container
 │
 ├── widgets/
 │   ├── WidgetPreview.tsx       # Live preview
@@ -247,7 +224,6 @@ app/components/
 | Screen | Polaris Components |
 |--------|-------------------|
 | **All** | `s-page`, `s-section`, `s-button`, `s-paragraph`, `s-link`, `s-stack` |
-| **Plans** | `s-card`, `s-badge`, `s-banner` |
 | **Widgets** | `s-slider`, `s-color-picker`, `s-select`, `s-button-group` |
 | **Statement** | Custom editor, `s-button-group` |
 | **Support** | iframe for video |
@@ -261,10 +237,10 @@ app/components/
 
 | Use Case | Choice | Rationale |
 |----------|--------|-----------|
-| **Billing** | GraphQL (Shopify) | Only option for subscriptions |
-| **Settings CRUD** | Repository + Prisma | Works with existing table |
+| **Settings CRUD** | Repository + Prisma | Direct access via shop column |
 | **Widget Config** | Repository + Prisma | Direct DB access |
 | **Public API** | REST route | No auth, simple endpoint |
+| **Billing** | To be implemented | Future feature |
 
 ### Data Access Pattern (Repository)
 
@@ -272,33 +248,28 @@ app/components/
 // app/repositories/accessibility.repository.ts
 
 import { PrismaClient } from "@prisma/client";
-import { hashShopDomain } from "../utils/hash";
 
 export class AccessibilityRepository {
   constructor(private db: PrismaClient) {}
 
   async findByShopDomain(shopDomain: string, appId: number) {
-    const storeId = hashShopDomain(shopDomain);
-
     return this.db.accessibilities.findFirst({
       where: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shopDomain,
         deleted_at: null,
       },
     });
   }
 
   async findOrCreate(shopDomain: string, appId: number) {
-    const storeId = hashShopDomain(shopDomain);
-
     const existing = await this.findByShopDomain(shopDomain, appId);
     if (existing) return existing;
 
     return this.db.accessibilities.create({
       data: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shopDomain,
         status: 0,
         icon: "icon-circle",
         position: "bottom-right",
@@ -352,124 +323,7 @@ export class AccessibilityRepository {
 }
 ```
 
-### Billing Service (GraphQL)
-
-```typescript
-// app/services/billing.service.ts
-
-export interface BillingStatus {
-  hasActivePlan: boolean;
-  planType?: "monthly" | "annual";
-  trialEndsAt?: Date;
-  status: "none" | "trial" | "active" | "past_due" | "cancelled";
-}
-
-export class BillingService {
-  async checkBillingStatus(admin: AdminApiContext): Promise<BillingStatus> {
-    const query = `#graphql
-      query {
-        appInstallation {
-          activeSubscriptions {
-            ... on AppSubscription {
-              id
-              status
-              createdAt
-              name
-              trialDays
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await admin.graphql(query);
-    const data = await response.json();
-    const subscriptions = data.data?.appInstallation?.activeSubscriptions || [];
-
-    if (subscriptions.length === 0) {
-      return { hasActivePlan: false, status: "none" };
-    }
-
-    const sub = subscriptions[0];
-    return {
-      hasActivePlan: true,
-      planType: sub.name?.toLowerCase().includes("annual") ? "annual" : "monthly",
-      status: sub.status,
-      trialEndsAt: sub.trialDays
-        ? new Date(Date.now() + sub.trialDays * 24 * 60 * 60 * 1000)
-        : undefined,
-    };
-  }
-
-  async requestPlan(
-    admin: AdminApiContext,
-    planType: "monthly" | "annual",
-    returnUrl: string
-  ): Promise<{ confirmUrl: string | null }> {
-    const mutation = `#graphql
-      mutation appSubscriptionCreate(
-        $name: String!
-        $returnUrl: URL!
-        $trialDays: Int
-        $test: Boolean
-      ) {
-        appSubscriptionCreate(
-          name: $name
-          returnUrl: $returnUrl
-          trialDays: $trialDays
-          test: $test
-          lineItems: [{
-            plan: {
-              appRecurringPricingDetails: {
-                price: ${planType === "monthly" ? "{ amount: 6.99, currencyCode: USD }" : "{ amount: 67.2, currencyCode: USD }"}
-                interval: ${planType === "monthly" ? "EVERY_30_DAYS" : "ANNUAL"}
-              }
-            }
-          }]
-        ) {
-          userErrors { field message }
-          confirmationUrl
-          appSubscription { id status }
-        }
-      }
-    `;
-
-    const response = await admin.graphql(mutation, {
-      variables: {
-        name: planType === "monthly" ? "Monthly Plan" : "Annual Plan",
-        returnUrl,
-        trialDays: 14,
-        test: true,
-      },
-    });
-
-    const data = await response.json();
-    return { confirmUrl: data.data?.appSubscriptionCreate?.confirmationUrl };
-  }
-}
-```
-
-### FNV-1a Hash Utility
-
-```typescript
-// app/utils/hash.ts
-
-/**
- * FNV-1a 64-bit hash function
- * Converts shop domain to store_id for accessibilities table lookup
- */
-export function hashShopDomain(shopDomain: string): bigint {
-  let hash = 0xcbf29ce484222325n; // FNV offset basis
-  const prime = 0x100000001b3n;   // FNV prime
-
-  for (let i = 0; i < shopDomain.length; i++) {
-    hash ^= BigInt(shopDomain.charCodeAt(i));
-    hash *= prime;
-  }
-
-  return hash;
-}
-```
+> **Note:** Billing functionality has been removed and will be implemented in a future update. All app features are currently accessible without subscription checks.
 
 ### Public API Endpoint
 
@@ -478,7 +332,6 @@ export function hashShopDomain(shopDomain: string): bigint {
 
 import { json } from "react-router";
 import { prisma } from "../db.server";
-import { hashShopDomain } from "../utils/hash";
 import { getAppIdFromConfig } from "../utils/config";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -489,13 +342,12 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   }
 
   try {
-    const storeId = hashShopDomain(shop);
     const appId = getAppIdFromConfig();
 
     const accessibility = await prisma.accessibilities.findFirst({
       where: {
         app_id: BigInt(appId),
-        store_id: storeId,
+        shop: shop,
         status: 1, // Only enabled widgets
         deleted_at: null,
       },
@@ -660,19 +512,12 @@ docs/
 ## 7. Implementation Priorities
 
 ### Phase 1: Core Infrastructure (Week 1)
-- [ ] Create `utils/hash.ts` - FNV-1a function
+- [x] Add `shop` column to accessibilities table
 - [ ] Create `repositories/accessibility.repository.ts`
-- [ ] Create `services/billing.service.ts`
 - [ ] Create `validators/accessibility.validator.ts`
-- [ ] Update `app.tsx` with dynamic navigation
+- [ ] Update `app.tsx` with navigation
 
-### Phase 2: Plans Page (Week 1-2)
-- [ ] Implement `app.plans.tsx` route
-- [ ] Create PlanCard component
-- [ ] Integrate BillingService with GraphQL
-- [ ] Handle subscription confirmation flow
-
-### Phase 3: Setup Page (Week 2)
+### Phase 2: Setup Page (Week 1-2)
 - [ ] Implement `app.setup.tsx` route
 - [ ] Create welcome/onboarding UI
 - [ ] Implement status banner
@@ -712,35 +557,22 @@ docs/
 <s-link href="/app/widgets">Widgets</s-link>
 ```
 
-### Billing Check (Server-Side Only)
+### Shop Domain Queries
 
 ```typescript
-// ❌ DON'T - Can be spoofed
-const isPaid = localStorage.getItem("isPaid");
-
-// ✅ DO - Verified via GraphQL
-const billingStatus = await billingService.checkBillingStatus(admin);
-if (!billingStatus.hasActivePlan) {
-  return redirect("/app/plans");
-}
-```
-
-### Shop Domain to store_id Mapping
-
-```typescript
-// Always use hash function
-import { hashShopDomain } from "~/utils/hash";
-
-const storeId = hashShopDomain(session.shop); // "store.myshopify.com" → BigInt
+// Use shop column directly from session
+const shopDomain = session.shop; // "store.myshopify.com"
 
 const settings = await prisma.accessibilities.findFirst({
   where: {
     app_id: BigInt(appId),
-    store_id: storeId,
+    shop: shopDomain,
     deleted_at: null,
   },
 });
 ```
+
+> **Note:** The `store_id` column is retained for backward compatibility with legacy databases. New code should use the `shop` column.
 
 ### Widget Preview (CSS Custom Properties)
 
@@ -765,22 +597,25 @@ const WidgetPreview = ({ settings }) => (
 ## 9. Security Considerations
 
 1. **Authentication**: All `/app/*` routes use `authenticate.admin(request)`
-2. **Billing Verification**: Check subscription via GraphQL before feature access
-3. **Public Endpoint**: Rate-limit `api.accessibilities.$shop.tsx`
-4. **Input Validation**: Zod schemas for all user inputs
-5. **XSS Prevention**: Sanitize HTML in statement editor
-6. **CORS**: Restrict for public API endpoint
+2. **Public Endpoint**: Rate-limit `api.accessibilities.$shop.tsx`
+3. **Input Validation**: Zod schemas for all user inputs
+4. **XSS Prevention**: Sanitize HTML in statement editor
+5. **CORS**: Restrict for public API endpoint
 
 ---
 
 ## 10. References
 
-- **Full Database Design**: `docs/database-design.md` - Repository patterns, FNV-1a details
+- **Full Database Design**: `docs/database-design.md` - Repository patterns, shop column usage
 - **UI/UX Specification**: `docs/ui-ux-design-specification.md` - Polaris components
 - **User Flow**: `docs/user-flow-and-screens.md` - Original requirements
 
 ---
 
-**Document Version:** 2.0
-**Last Updated:** 2025-03-03
-**Changes:** Updated to work with existing schema (no Store model, use FNV-1a hash, Repository pattern)
+**Document Version:** 3.0
+**Last Updated:** 2026-03-04
+**Changes:**
+- Removed billing functionality (to be implemented later)
+- Added `shop` column to accessibilities table for direct queries
+- Removed FNV-1a hash requirement (use shop column directly)
+- Repository pattern updated to use shop column
