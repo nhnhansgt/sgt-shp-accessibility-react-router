@@ -3,6 +3,9 @@ import type {
   HeadersFunction,
   LoaderFunctionArgs,
 } from "react-router";
+import { useLoaderData } from "react-router";
+import { authenticate } from "../shopify.server";
+import { boundary } from "@shopify/shopify-app-react-router/server";
 
 // Toolbar button configuration
 interface ToolbarButton {
@@ -28,9 +31,6 @@ const TOOLBAR_BUTTONS: ToolbarButton[] = [
   { id: "link", label: "Insert Link", icon: "🔗", command: "link" },
   { id: "image", label: "Insert Image", icon: "🖼", command: "image" },
 ];
-import { useLoaderData } from "react-router";
-import { authenticate } from "../shopify.server";
-import { boundary } from "@shopify/shopify-app-react-router/server";
 
 // Mock data - TODO: Replace with actual data from database
 const MOCK_STATEMENT_CONTENT = `
@@ -83,9 +83,81 @@ export default function Statement() {
     setIsDirty(true);
   };
 
+  // Handle save
+  const handleSave = async () => {
+    setIsSaving(true);
+
+    // TODO: Replace with actual API call to save statement
+    console.log("Saving statement:", editorContent);
+
+    // Simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    setIsSaving(false);
+    setIsDirty(false);
+
+    // TODO: Show success toast
+    alert("Statement saved! (Mock - no backend)");
+  };
+
+  // Handle reset to default
+  const handleReset = () => {
+    if (window.confirm("Are you sure you want to reset to the default statement? All changes will be lost.")) {
+      setEditorContent(MOCK_STATEMENT_CONTENT);
+      setIsDirty(false);
+    }
+  };
+
   return (
     <s-page heading="Accessibility Statement">
-      <div style={EDITOR_CONTAINER_STYLE}><EditorToolbar onCommand={handleExecCommand} /><ContentEditor content={editorContent} onChange={(newContent) => { setEditorContent(newContent); setIsDirty(true); }} /></div>
+      {/* Editor Section */}
+      <s-section>
+        <div style={EDITOR_CONTAINER_STYLE}>
+          <EditorToolbar onCommand={handleExecCommand} />
+          <ContentEditor
+            content={editorContent}
+            onChange={(newContent) => {
+              setEditorContent(newContent);
+              setIsDirty(true);
+            }}
+          />
+        </div>
+      </s-section>
+
+      {/* Action Buttons Section */}
+      <s-section>
+        <s-stack direction="inline" gap="base">
+          <s-button
+            variant="primary"
+            onClick={handleSave}
+            disabled={isSaving || !isDirty}
+            aria-label="Save statement"
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </s-button>
+
+          <s-button
+            variant="secondary"
+            onClick={handleReset}
+            disabled={isSaving}
+            aria-label="Reset to default statement"
+          >
+            Reset to Default
+          </s-button>
+        </s-stack>
+      </s-section>
+
+      {/* Footer Links Section */}
+      <s-section>
+        <s-stack direction="inline" gap="base">
+          <s-link href={links.privacyPolicy} target="_blank">
+            Privacy Policy
+          </s-link>
+          <s-link href={links.termsOfService} target="_blank">
+            Terms of Service
+          </s-link>
+        </s-stack>
+      </s-section>
     </s-page>
   );
 }
@@ -97,14 +169,6 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-// TODO: Replace mock content with actual query from database
-// TODO: Implement actual save functionality with API call
-// TODO: Add success/error toast notifications
-// TODO: Add Japanese language support
-// TODO: Implement rich text editor with Draft.js or similar
-// TODO: Add validation for statement content
-// TODO: Implement reset to default functionality
 
 // Editor styles
 const EDITOR_CONTAINER_STYLE = {
@@ -242,3 +306,11 @@ function EditorToolbar({ onCommand }: { onCommand: (command: string, arg?: strin
     </div>
   );
 }
+
+// TODO: Replace mock content with actual query from database
+// TODO: Implement actual save functionality with API call
+// TODO: Add success/error toast notifications
+// TODO: Add Japanese language support
+// TODO: Implement rich text editor with Draft.js or similar
+// TODO: Add validation for statement content
+// TODO: Implement reset to default functionality
