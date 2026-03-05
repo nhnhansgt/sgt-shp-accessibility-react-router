@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type {
   HeadersFunction,
   LoaderFunctionArgs,
@@ -85,7 +85,7 @@ export default function Statement() {
 
   return (
     <s-page heading="Accessibility Statement">
-      {/* TODO: Add editor UI */}
+      <div style={EDITOR_CONTAINER_STYLE}><EditorToolbar onCommand={handleExecCommand} /><ContentEditor content={editorContent} onChange={(newContent) => { setEditorContent(newContent); setIsDirty(true); }} /></div>
     </s-page>
   );
 }
@@ -105,6 +105,64 @@ export const headers: HeadersFunction = (headersArgs) => {
 // TODO: Implement rich text editor with Draft.js or similar
 // TODO: Add validation for statement content
 // TODO: Implement reset to default functionality
+
+// Editor styles
+const EDITOR_CONTAINER_STYLE = {
+  borderWidth: "1px",
+  borderRadius: "8px",
+  backgroundColor: "#ffffff",
+  overflow: "hidden",
+  borderStyle: "solid",
+  borderColor: "#c9cccf",
+};
+
+const EDITOR_STYLE = {
+  padding: "16px",
+  minHeight: "400px",
+  maxHeight: "600px",
+  overflowY: "auto" as const,
+  fontSize: "16px",
+  lineHeight: 1.6,
+};
+
+// ContentEditable Editor component
+function ContentEditor({
+  content,
+  onChange,
+}: {
+  content: string;
+  onChange: (content: string) => void;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  // Initialize content
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = content;
+    }
+  }, [content]);
+
+  // Handle content changes
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable
+      onInput={handleInput}
+      style={EDITOR_STYLE}
+      role="textbox"
+      aria-label="Accessibility statement editor"
+      aria-multiline="true"
+      suppressContentEditableWarning
+      className="statement-editor"
+    />
+  );
+}
 
 // Toolbar component
 function EditorToolbar({ onCommand }: { onCommand: (command: string, arg?: string) => void }) {
