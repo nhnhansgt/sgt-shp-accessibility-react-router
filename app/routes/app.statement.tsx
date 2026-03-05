@@ -77,6 +77,21 @@ export default function Statement() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Inject editor styles
+  useEffect(() => {
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = EDITOR_STYLES;
+    styleSheet.id = "statement-editor-styles";
+    document.head.appendChild(styleSheet);
+
+    return () => {
+      const existing = document.getElementById("statement-editor-styles");
+      if (existing) {
+        document.head.removeChild(existing);
+      }
+    };
+  }, []);
+
   // Execute rich text commands
   const handleExecCommand = (command: string, arg?: string) => {
     document.execCommand(command, false, arg);
@@ -314,3 +329,76 @@ function EditorToolbar({ onCommand }: { onCommand: (command: string, arg?: strin
 // TODO: Implement rich text editor with Draft.js or similar
 // TODO: Add validation for statement content
 // TODO: Implement reset to default functionality
+
+// Editor content styles
+const EDITOR_STYLES = `
+  .statement-editor h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #202223;
+  }
+
+  .statement-editor h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    color: #202223;
+  }
+
+  .statement-editor h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    color: #202223;
+  }
+
+  .statement-editor p {
+    margin-bottom: 16px;
+    line-height: 1.6;
+    color: #202223;
+  }
+
+  .statement-editor ul,
+  .statement-editor ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+
+  .statement-editor li {
+    margin-bottom: 8px;
+  }
+
+  .statement-editor a {
+    color: #007ace;
+    text-decoration: underline;
+  }
+
+  .statement-editor img {
+    max-width: 100%;
+    height: auto;
+    margin: 16px 0;
+  }
+
+  .statement-editor blockquote {
+    border-left: 4px solid #c9cccf;
+    padding-left: 16px;
+    margin: 16px 0;
+    color: #6d7175;
+    font-style: italic;
+  }
+
+  .statement-editor strong {
+    font-weight: 600;
+  }
+
+  .statement-editor em {
+    font-style: italic;
+  }
+
+  .statement-editor u {
+    text-decoration: underline;
+  }
+`;
