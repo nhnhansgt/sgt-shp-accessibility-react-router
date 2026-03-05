@@ -156,6 +156,61 @@ export default function Setup() {
           </s-stack>
         </s-box>
       </s-section>
+
+      <s-section>
+        <s-box
+          padding="base"
+          borderWidth="base"
+          borderRadius="base"
+          background="subdued"
+        >
+          <s-stack direction="block" gap="base">
+            <s-heading>Have questions or need assistance?</s-heading>
+
+            <s-paragraph>
+              Our team is here to help you with any questions about accessibility.
+            </s-paragraph>
+
+            <s-stack direction="inline" gap="base">
+              <s-button
+                variant="primary"
+                aria-label="Open chat support"
+                onClick={() => {
+                  window.open("https://crisp.chat", "_blank");
+                }}
+              >
+                Chat with us
+              </s-button>
+
+              <s-button
+                variant="secondary"
+                aria-label="Send email to support"
+                onClick={() => {
+                  window.location.href = "mailto:support@sgt-lab.com";
+                }}
+              >
+                Email
+              </s-button>
+
+              <s-button
+                variant="secondary"
+                aria-label="Open knowledge base"
+                onClick={() => {
+                  window.open("https://sgt-lab.com/help", "_blank");
+                }}
+              >
+                Knowledge Base
+              </s-button>
+            </s-stack>
+
+            <s-box padding="base">
+              <s-text color="subdued">
+                <div style={{ textAlign: "center" }}>Technical Support Available</div>
+              </s-text>
+            </s-box>
+          </s-stack>
+        </s-box>
+      </s-section>
     </s-page>
   );
 }
