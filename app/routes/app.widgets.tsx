@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type {
   HeadersFunction,
   LoaderFunctionArgs,
@@ -179,67 +179,36 @@ export default function Widgets() {
         {/* Settings Column (Left) */}
         <div style={{ flex: "1 1 400px", minWidth: "320px" }}>
           {/* Widget Icon Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Icon</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Icon</SectionHeading>
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
               {ICON_OPTIONS.map((icon) => (
-                <div
+                <SelectableCard
                   key={icon.id}
+                  id={icon.id}
+                  isSelected={selectedIcon === icon.id}
                   onClick={() => setSelectedIcon(icon.id)}
-                  aria-label={`Select ${icon.label} icon`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e: React.KeyboardEvent) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setSelectedIcon(icon.id);
-                    }
-                  }}
-                  style={{
-                    padding: "16px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    borderStyle: selectedIcon === icon.id ? "solid" : "dashed",
-                    borderColor: selectedIcon === icon.id ? "#008060" : "#c9cccf",
-                    borderWidth: selectedIcon === icon.id ? "2px" : "1px",
-                    background: selectedIcon === icon.id ? "#f6f6f7" : "transparent",
-                    textAlign: "center",
-                    minWidth: "80px",
-                  }}
+                  ariaLabel={`Select ${icon.label} icon`}
                 >
-                  <div style={{ fontSize: "24px", marginBottom: "4px" }}>{icon.emoji}</div>
-                  <span style={{ fontSize: "12px", color: "#6d7175" }}>{icon.label}</span>
-                </div>
+                  <div style={EMOJI_STYLE}>{icon.emoji}</div>
+                  <span style={LABEL_STYLE}>{icon.label}</span>
+                </SelectableCard>
               ))}
             </div>
           </div>
 
           {/* Widget Position Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Position</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Position</SectionHeading>
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
               {POSITION_OPTIONS.map((position) => (
-                <div
+                <SelectableCard
                   key={position.id}
+                  id={position.id}
+                  isSelected={selectedPosition === position.id}
                   onClick={() => setSelectedPosition(position.id)}
-                  aria-label={`Set position to ${position.label}`}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e: React.KeyboardEvent) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setSelectedPosition(position.id);
-                    }
-                  }}
-                  style={{
-                    padding: "16px",
-                    borderRadius: "8px",
-                    cursor: "pointer",
-                    borderStyle: selectedPosition === position.id ? "solid" : "dashed",
-                    borderColor: selectedPosition === position.id ? "#008060" : "#c9cccf",
-                    borderWidth: selectedPosition === position.id ? "2px" : "1px",
-                    background: selectedPosition === position.id ? "#f6f6f7" : "transparent",
-                    textAlign: "center",
-                    minWidth: "100px",
-                  }}
+                  ariaLabel={`Set position to ${position.label}`}
+                  minWidth="100px"
                 >
                   <div
                     style={{
@@ -267,129 +236,42 @@ export default function Widgets() {
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: "12px", color: "#6d7175" }}>{position.label}</span>
-                </div>
+                  <span style={LABEL_STYLE}>{position.label}</span>
+                </SelectableCard>
               ))}
             </div>
           </div>
 
           {/* Widget Size Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Size</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Size</SectionHeading>
             <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
-                <span style={{ minWidth: "80px", fontSize: "14px" }}>Size: {widgetSize}px</span>
-                <input
-                  type="range"
-                  min="24"
-                  max="50"
-                  value={widgetSize}
-                  onChange={(e) => setWidgetSize(Number(e.target.value))}
-                  aria-label="Widget size"
-                  style={{ flex: 1, height: "4px", borderRadius: "2px" }}
-                />
-              </div>
+              <SliderRow label="Size" value={widgetSize} unit="px" onChange={setWidgetSize} min={24} max={50} ariaLabel="Widget size" />
             </div>
           </div>
 
           {/* Widget Offset Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Offset</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Offset</SectionHeading>
             <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                <span style={{ minWidth: "80px", fontSize: "14px" }}>X Offset: {offsetX}px</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={offsetX}
-                  onChange={(e) => setOffsetX(Number(e.target.value))}
-                  aria-label="Widget X offset"
-                  style={{ flex: 1, height: "4px", borderRadius: "2px" }}
-                />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <span style={{ minWidth: "80px", fontSize: "14px" }}>Y Offset: {offsetY}px</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={offsetY}
-                  onChange={(e) => setOffsetY(Number(e.target.value))}
-                  aria-label="Widget Y offset"
-                  style={{ flex: 1, height: "4px", borderRadius: "2px" }}
-                />
-              </div>
+              <SliderRow label="X Offset" value={offsetX} unit="px" onChange={setOffsetX} min={0} max={100} ariaLabel="Widget X offset" />
+              <SliderRow label="Y Offset" value={offsetY} unit="px" onChange={setOffsetY} min={0} max={100} ariaLabel="Widget Y offset" />
             </div>
           </div>
 
           {/* Widget Colors Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Colors</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Colors</SectionHeading>
             <div style={{ marginBottom: "16px" }}>
-              {/* Icon Color */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                <span style={{ minWidth: "100px", fontSize: "14px" }}>Icon Color:</span>
-                <input
-                  type="color"
-                  value={iconColor}
-                  onChange={(e) => setIconColor(e.target.value)}
-                  aria-label="Icon color"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    border: "1px solid #c9cccf",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    padding: "2px",
-                  }}
-                />
-                <span style={{ fontSize: "14px", color: "#6d7175" }}>{iconColor}</span>
-              </div>
-              {/* Background Color */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                <span style={{ minWidth: "100px", fontSize: "14px" }}>Background:</span>
-                <input
-                  type="color"
-                  value={backgroundColor}
-                  onChange={(e) => setBackgroundColor(e.target.value)}
-                  aria-label="Widget background color"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    border: "1px solid #c9cccf",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    padding: "2px",
-                  }}
-                />
-                <span style={{ fontSize: "14px", color: "#6d7175" }}>{backgroundColor}</span>
-              </div>
-              {/* Panel Background Color */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                <span style={{ minWidth: "100px", fontSize: "14px" }}>Panel Bg:</span>
-                <input
-                  type="color"
-                  value={themeBgColor}
-                  onChange={(e) => setThemeBgColor(e.target.value)}
-                  aria-label="Panel background color"
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    border: "1px solid #c9cccf",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    padding: "2px",
-                  }}
-                />
-                <span style={{ fontSize: "14px", color: "#6d7175" }}>{themeBgColor}</span>
-              </div>
+              <ColorPickerRow label="Icon Color" value={iconColor} onChange={setIconColor} ariaLabel="Icon color" />
+              <ColorPickerRow label="Background" value={backgroundColor} onChange={setBackgroundColor} ariaLabel="Widget background color" />
+              <ColorPickerRow label="Panel Bg" value={themeBgColor} onChange={setThemeBgColor} ariaLabel="Panel background color" />
             </div>
           </div>
 
           {/* Widget Font Section */}
-          <div style={{ marginBottom: "24px" }}>
-            <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" }}>Widget Font</h2>
+          <div style={SECTION_STYLE}>
+            <SectionHeading>Widget Font</SectionHeading>
             <div style={{ marginBottom: "16px" }}>
               <select
                 value={selectedFont}
@@ -420,14 +302,9 @@ export default function Widgets() {
                   background: "#f6f6f7",
                 }}
               >
-                <span
-                  style={{
-                    fontFamily: FONT_OPTIONS.find((f) => f.id === selectedFont)?.family,
-                    fontSize: "16px",
-                  }}
-                >
+                <FontPreviewText fontId={selectedFont}>
                   Preview: The quick brown fox jumps over the lazy dog
-                </span>
+                </FontPreviewText>
               </div>
             </div>
           </div>
@@ -467,15 +344,7 @@ export default function Widgets() {
                 </div>
 
                 {/* Widget Button Preview */}
-                <div
-                  style={{
-                    position: "absolute",
-                    top: selectedPosition.includes("top") ? `${offsetY}px` : "auto",
-                    bottom: selectedPosition.includes("bottom") ? `${offsetY}px` : "auto",
-                    left: selectedPosition.includes("left") ? `${offsetX}px` : "auto",
-                    right: selectedPosition.includes("right") ? `${offsetX}px` : "auto",
-                  }}
-                >
+                <div style={getPreviewPositionStyle(selectedPosition, offsetX, offsetY)}>
                   <div
                     style={{
                       width: `${widgetSize}px`,
@@ -511,26 +380,14 @@ export default function Widgets() {
                 }}
               >
                 <div style={{ marginBottom: "8px" }}>
-                  <strong
-                    style={{
-                      fontFamily: FONT_OPTIONS.find((f) => f.id === selectedFont)?.family,
-                      color: iconColor,
-                      fontSize: "16px",
-                    }}
-                  >
+                  <strong style={{ fontFamily: FONT_OPTIONS.find((f) => f.id === selectedFont)?.family, color: iconColor, fontSize: "16px" }}>
                     Accessibility Options
                   </strong>
                 </div>
-                <div
-                  style={{
-                    fontFamily: FONT_OPTIONS.find((f) => f.id === selectedFont)?.family,
-                    color: iconColor,
-                    fontSize: "14px",
-                  }}
-                >
+                <FontPreviewText fontId={selectedFont}>
                   <div style={{ marginBottom: "4px" }}>Font Size: A A A</div>
                   <div>Contrast: ○ ○ ○</div>
-                </div>
+                </FontPreviewText>
               </div>
             </div>
 
@@ -599,3 +456,157 @@ export const headers: HeadersFunction = (headersArgs) => {
 // TODO: Implement real widget preview with actual accessibility features
 // TODO: Add debounced preview updates for better performance
 // TODO: Add accessibility features to preview panel (font size, contrast, etc.)
+
+// Reusable styles
+const SECTION_STYLE = { marginBottom: "24px" };
+const HEADING_STYLE = { fontSize: "18px", fontWeight: 600, marginBottom: "12px", color: "#202223" };
+const CARD_BASE_STYLE = {
+  padding: "16px",
+  borderRadius: "8px",
+  cursor: "pointer",
+  textAlign: "center" as const,
+};
+const getCardSelectedStyle = (isSelected: boolean) => ({
+  borderStyle: isSelected ? "solid" : "dashed",
+  borderColor: isSelected ? "#008060" : "#c9cccf",
+  borderWidth: isSelected ? "2px" : "1px",
+  background: isSelected ? "#f6f6f7" : "transparent",
+});
+const LABEL_STYLE = { fontSize: "12px", color: "#6d7175" };
+const EMOJI_STYLE = { fontSize: "24px", marginBottom: "4px" };
+
+// Helper to get preview position styles
+function getPreviewPositionStyle(position: string, offsetX: number, offsetY: number) {
+  return {
+    position: "absolute" as const,
+    top: position.includes("top") ? `${offsetY}px` : "auto",
+    bottom: position.includes("bottom") ? `${offsetY}px` : "auto",
+    left: position.includes("left") ? `${offsetX}px` : "auto",
+    right: position.includes("right") ? `${offsetX}px` : "auto",
+  };
+}
+
+// Reusable section heading component
+function SectionHeading({ children }: { children: string }) {
+  return <h2 style={HEADING_STYLE}>{children}</h2>;
+}
+
+// Reusable slider row component
+interface SliderRowProps {
+  label: string;
+  value: number;
+  unit: string;
+  onChange: (value: number) => void;
+  min: number;
+  max: number;
+  ariaLabel: string;
+}
+
+function SliderRow({ label, value, unit, onChange, min, max, ariaLabel }: SliderRowProps) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+      <span style={{ minWidth: "80px", fontSize: "14px" }}>{label}: {value}{unit}</span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        aria-label={ariaLabel}
+        style={{ flex: 1, height: "4px", borderRadius: "2px" }}
+      />
+    </div>
+  );
+}
+
+// Reusable color picker row component
+interface ColorPickerRowProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}
+
+function ColorPickerRow({ label, value, onChange, ariaLabel }: ColorPickerRowProps) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+      <span style={{ minWidth: "100px", fontSize: "14px" }}>{label}:</span>
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
+        style={{
+          width: "40px",
+          height: "40px",
+          border: "1px solid #c9cccf",
+          borderRadius: "4px",
+          cursor: "pointer",
+          padding: "2px",
+        }}
+      />
+      <span style={{ fontSize: "14px", color: "#6d7175" }}>{value}</span>
+    </div>
+  );
+}
+
+// Reusable font preview component
+interface FontPreviewTextProps {
+  fontId: string;
+  children: React.ReactNode;
+}
+
+function FontPreviewText({ fontId, children }: FontPreviewTextProps) {
+  const font = FONT_OPTIONS.find((f) => f.id === fontId);
+  return (
+    <span
+      style={{
+        fontFamily: font?.family,
+        fontSize: "16px",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// Reusable icon/position card component
+interface SelectableCardProps {
+  id: string;
+  isSelected: boolean;
+  onClick: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+  minWidth?: string;
+}
+
+function SelectableCard({
+  id,
+  isSelected,
+  onClick,
+  ariaLabel,
+  children,
+  minWidth = "80px",
+}: SelectableCardProps) {
+  return (
+    <div
+      key={id}
+      onClick={onClick}
+      aria-label={ariaLabel}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onClick();
+        }
+      }}
+      style={{
+        ...CARD_BASE_STYLE,
+        ...getCardSelectedStyle(isSelected),
+        minWidth,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
