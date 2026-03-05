@@ -5,27 +5,27 @@ import type {
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-
-// Mock data - TODO: Replace with actual data from database
-const MOCK_DATA = {
-  isYearEndSale: true,
-  saleDays: 90,
-  videoUrl: "https://www.youtube.com/embed/e0WOkdanoJo",
-  videoTitle: "How to use Accessibility app",
-  supportEmail: "support@sgt-lab.com",
-  knowledgeBaseUrl: "https://sgt-lab.com/help/category/accessibility-faqs/",
-  links: {
-    privacyPolicy: "https://sgt-lab.com/privacy",
-    termsOfService: "https://sgt-lab.com/terms",
-  },
-};
+import prisma from "~/db.server";
+import { AccessibilityRepository } from "~/repositories/accessibility.repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
 
-  // TODO: Replace with actual query to get store settings
+  const repository = new AccessibilityRepository(prisma);
+  await repository.findOrCreate(shopDomain);
+
   return {
-    ...MOCK_DATA,
+    isYearEndSale: false,
+    saleDays: 0,
+    videoUrl: "https://www.youtube.com/embed/e0WOkdanoJo",
+    videoTitle: "How to use Accessibility app",
+    supportEmail: "support@sgt-lab.com",
+    knowledgeBaseUrl: "https://sgt-lab.com/help/category/accessibility-faqs/",
+    links: {
+      privacyPolicy: "https://sgt-lab.com/privacy",
+      termsOfService: "https://sgt-lab.com/terms",
+    },
   };
 };
 
@@ -193,7 +193,6 @@ export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
 
-// TODO: Replace mock data with actual query from database
 // TODO: Implement Crisp chat widget integration (CHAT_SCRIPT_ID: d170d7db-9b6f-4278-9058-c0216e1daeb7)
 // TODO: Add Japanese language support using multipleLanguageSelector hook
 // TODO: Add responsive design for mobile/tablet
