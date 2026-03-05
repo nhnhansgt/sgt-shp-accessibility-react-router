@@ -231,3 +231,9 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
+
+// TODO: Replace mock billing data with actual query from database
+// TODO: Implement actual billing confirmation with Shopify Billing API
+// TODO: Handle webhook for billing status updates
+// TODO: Add Japanese language support using multipleLanguageSelector hook
+// TODO: Add dismissible state for sale banner (persist to localStorage)
