@@ -19,7 +19,7 @@ export type FontOption =
 
 export interface AccessibilityOptions {
   color: string;           // Hex color
-  size: string | number;   // 24-50
+  size: number;            // 24-50
   background_color: string; // Hex color
   offsetX: number;         // 0-100
   offsetY: number;         // 0-100
@@ -49,8 +49,4 @@ export interface Accessibility {
   created_at: Date | null;
   updated_at: Date | null;
   deleted_at: Date | null;
-}
-
-export interface AccessibilityWithParsedOptions extends Accessibility {
-  optionsParsed?: AccessibilityOptions;
 }
