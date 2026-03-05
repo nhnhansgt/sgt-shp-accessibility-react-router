@@ -92,6 +92,23 @@ export default function Statement() {
     };
   }, []);
 
+  // Warn about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
+
   // Execute rich text commands
   const handleExecCommand = (command: string, arg?: string) => {
     document.execCommand(command, false, arg);
