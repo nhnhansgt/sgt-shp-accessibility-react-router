@@ -43,6 +43,25 @@ export default function Setup() {
           </s-box>
         </s-section>
       )}
+
+      <s-section>
+        <s-box
+          padding="base"
+          background={isAccessibilityOn ? "subdued" : "subdued"}
+          borderRadius="base"
+        >
+          <s-stack direction="inline" gap="base">
+            <s-text>
+              {isAccessibilityOn
+                ? "Accessibility is enabled"
+                : "Accessibility is not enabled"}
+            </s-text>
+            <s-button variant="secondary">
+              Open Theme Editor
+            </s-button>
+          </s-stack>
+        </s-box>
+      </s-section>
     </s-page>
   );
 }
