@@ -23,6 +23,7 @@ export default function App() {
         <s-link href="/app/plans">Plans</s-link>
         <s-link href="/app/widgets">Widgets</s-link>
         <s-link href="/app/statement">Statement</s-link>
+        <s-link href="/app/support">Guides & Support</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
