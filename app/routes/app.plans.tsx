@@ -55,14 +55,6 @@ const PLANS: Plan[] = [
   },
 ];
 
-const FEATURES = [
-  "Enhanced Readability",
-  "Visually Pleasing Design",
-  "Simplified Navigation",
-  "Custom Brand Integration",
-  "Premium Support",
-];
-
 function getButtonText(
   currentPlan: string | null,
   planPeriod: "monthly" | "annual"
