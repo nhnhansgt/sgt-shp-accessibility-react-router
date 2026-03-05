@@ -77,7 +77,6 @@ function PlanCard({
   plan,
   currentPlan,
   onSelect,
-  isLoading,
   requestingPlan,
 }: PlanCardProps) {
   const isCurrentPlan = currentPlan === plan.id;
@@ -152,8 +151,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   await authenticate.admin(request);
-  const formData = await request.formData();
-  const planId = formData.get("planId");
 
   // TODO: Replace with actual billing mutation
   // For now, return fake confirmation URL
