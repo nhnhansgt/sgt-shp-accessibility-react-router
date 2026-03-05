@@ -11,6 +11,53 @@ const MOCK_ACCESSIBILITY_ENABLED = true;
 const MOCK_IS_YEAR_END_SALE = false;
 const MOCK_SALE_DAYS = 0;
 
+// Guide steps data
+interface GuideStep {
+  number: number;
+  title: string;
+  description: string;
+  href?: string;
+  target?: string;
+  links?: { label: string; href: string; target?: string }[];
+}
+
+const GETTING_STARTED_STEPS: GuideStep[] = [
+  {
+    number: 1,
+    title: "Customize your widget",
+    description: "Choose icons, colors, and position",
+    href: "/app/widgets",
+  },
+  {
+    number: 2,
+    title: "Create your statement",
+    description: "Write your accessibility statement",
+    href: "/app/statement",
+  },
+  {
+    number: 3,
+    title: "Visit Help Center",
+    description: "Get answers to common questions",
+    href: "https://sgt-lab.com/help",
+    target: "_blank",
+  },
+  {
+    number: 4,
+    title: "Website & Facebook",
+    description: "Learn more about our services",
+    links: [
+      { label: "Website", href: "https://sgt-lab.com" },
+      { label: "Facebook", href: "https://facebook.com/sgtlab" },
+    ],
+  },
+  {
+    number: 5,
+    title: "Manage your plan",
+    description: "View or change your subscription",
+    href: "/app/plans",
+  },
+];
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
@@ -59,6 +106,53 @@ export default function Setup() {
             <s-button variant="secondary">
               Open Theme Editor
             </s-button>
+          </s-stack>
+        </s-box>
+      </s-section>
+
+      <s-section>
+        <s-box
+          padding="base"
+          borderWidth="base"
+          borderRadius="base"
+          background="subdued"
+        >
+          <s-stack direction="block" gap="base">
+            <s-heading>Welcome to Accessibility App</s-heading>
+
+            <s-paragraph>
+              Getting started is easy! Follow these steps to make your store more accessible:
+            </s-paragraph>
+
+            <s-unordered-list>
+              {GETTING_STARTED_STEPS.map((step) => (
+                <s-list-item key={step.number}>
+                  <s-stack direction="block" gap="base">
+                    <s-text>
+                      <strong>{step.number}. {step.title}</strong>
+                      {" - "}{step.description}
+                    </s-text>
+                    {step.links ? (
+                      <s-stack direction="inline" gap="base">
+                        {step.links.map((link) => (
+                          <s-link
+                            key={link.label}
+                            href={link.href}
+                            target={link.target || "_blank"}
+                          >
+                            {link.label}
+                          </s-link>
+                        ))}
+                      </s-stack>
+                    ) : step.href ? (
+                      <s-link href={step.href} target={step.target}>
+                        Go to {step.title.toLowerCase()}
+                      </s-link>
+                    ) : null}
+                  </s-stack>
+                </s-list-item>
+              ))}
+            </s-unordered-list>
           </s-stack>
         </s-box>
       </s-section>
