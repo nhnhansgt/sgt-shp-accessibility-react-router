@@ -42,6 +42,12 @@ npm run format            # Format code with Prettier
 npm run format:check      # Check formatting without modifying
 ```
 
+### Linting
+
+```bash
+npm run lint            # Run ESLint với cache
+```
+
 ### Type Checking
 
 ```bash
@@ -93,15 +99,17 @@ npm run graphql-codegen   # Generate TypeScript types from GraphQL schema
 - **app/routes** - File-based routing using React Router's flat routes
 - **app/shopify.server.ts** - Shopify app configuration and authentication
 - **app/db.server.ts** - Prisma client instance
-- **prisma/schema.prisma** - Database schema (default: SQLite)
+- **prisma/schema.prisma** - Database schema (MySQL cho local development)
 - **extensions/** - Shopify app extensions (UI extensions, Functions, etc.)
 
 ### Routing Pattern
 
 Routes use React Router's file-based naming:
 
-- `app/routes/app._index.tsx` → `/app` (main app page)
-- `app/routes/app.additional.tsx` → `/app/additional`
+- `app/routes/app.tsx` - Layout wrapper cho toàn bộ app
+- `app/routes/app._index.tsx` - Dashboard chính (`/app`)
+- `app/routes/app.plans.tsx` - Trang quản lý Plans (`/app/plans`)
+- `app/routes/app.additional.tsx` - Trang demo thêm (`/app/additional`)
 - `app/routes/webhooks.app.uninstalled.tsx` → Webhook handler
 - `app/routes/auth.$.tsx` → Auth route (catch-all)
 
