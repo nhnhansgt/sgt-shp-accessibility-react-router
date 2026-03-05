@@ -1,34 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type {
   HeadersFunction,
   LoaderFunctionArgs,
+  ActionFunctionArgs,
 } from "react-router";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useFetcher, redirect } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-
-// Mock data - TODO: Replace with actual data from database
-const MOCK_IS_YEAR_END_SALE = false;
-const MOCK_SALE_DAYS = 0;
-
-// Default widget options (matches database defaults)
-const DEFAULT_WIDGET_OPTIONS = {
-  color: "#ffffff",
-  size: "24",
-  background_color: "#FA6E0A",
-  offsetX: 10,
-  offsetY: 10,
-  locale: "en",
-  theme_bg_color: "#FA6E0A",
-  font: "8",
-};
-
-// Mock current settings
-const MOCK_WIDGET_SETTINGS = {
-  icon: "icon-circle",
-  position: "bottom-right",
-  options: DEFAULT_WIDGET_OPTIONS,
-};
+import prisma from "~/db.server";
+import { AccessibilityRepository } from "~/repositories/accessibility.repository";
+import type { AccessibilityOptions, WidgetIcon, WidgetPosition } from "~/types/accessibility";
 
 // Widget icon options
 interface IconOption {
@@ -85,18 +66,42 @@ const FONT_OPTIONS: FontOption[] = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
 
-  // TODO: Replace with actual query to get widget settings from database
+  const repository = new AccessibilityRepository(prisma);
+  const settings = await repository.findOrCreate(shopDomain);
+
   return {
-    isYearEndSale: MOCK_IS_YEAR_END_SALE,
-    saleDays: MOCK_SALE_DAYS,
-    settings: MOCK_WIDGET_SETTINGS,
+    isYearEndSale: false,
+    saleDays: 0,
+    settings: {
+      ...settings,
+      options: settings.options ? JSON.parse(settings.options as string) : {},
+    },
   };
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
+
+  const formData = await request.formData();
+  const settings = {
+    icon: formData.get("icon") as WidgetIcon,
+    position: formData.get("position") as WidgetPosition,
+    options: JSON.parse(formData.get("options") as string || "{}") as AccessibilityOptions,
+  };
+
+  const repository = new AccessibilityRepository(prisma);
+  await repository.updateWidgetSettings(shopDomain, settings);
+
+  return redirect("/app/widgets");
 };
 
 export default function Widgets() {
   const { isYearEndSale, saleDays, settings } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher();
 
   // State management for widget settings
   const [selectedIcon, setSelectedIcon] = useState(settings.icon);
@@ -108,17 +113,20 @@ export default function Widgets() {
   const [backgroundColor, setBackgroundColor] = useState(settings.options.background_color);
   const [themeBgColor, setThemeBgColor] = useState(settings.options.theme_bg_color);
   const [selectedFont, setSelectedFont] = useState(settings.options.font);
-  const [isSaving, setIsSaving] = useState(false);
 
-  // Handle save
-  const handleSave = async () => {
-    setIsSaving(true);
+  // Sync state after successful save
+  useEffect(() => {
+    // Data will be reloaded by loader after redirect
+  }, [fetcher.state]);
 
-    // TODO: Replace with actual API call to save settings
-    const widgetSettings = {
-      icon: selectedIcon,
-      position: selectedPosition,
-      options: {
+  // Handle save using fetcher
+  const handleSave = () => {
+    const formData = new FormData();
+    formData.append("icon", selectedIcon || "");
+    formData.append("position", selectedPosition || "");
+    formData.append(
+      "options",
+      JSON.stringify({
         color: iconColor,
         size: String(widgetSize),
         background_color: backgroundColor,
@@ -127,18 +135,10 @@ export default function Widgets() {
         locale: settings.options.locale,
         theme_bg_color: themeBgColor,
         font: selectedFont,
-      },
-    };
+      })
+    );
 
-    console.log("Saving widget settings:", widgetSettings);
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setIsSaving(false);
-
-    // TODO: Show success toast
-    alert("Widget settings saved! (Mock - no backend)");
+    fetcher.submit(formData, { method: "post" });
   };
 
   // Handle reset to defaults
@@ -153,6 +153,8 @@ export default function Widgets() {
     setThemeBgColor("#FA6E0A");
     setSelectedFont("8");
   };
+
+  const isSaving = fetcher.state !== "idle";
 
   return (
     <s-page heading="Customize Your Widget">
@@ -476,13 +478,14 @@ const LABEL_STYLE = { fontSize: "12px", color: "#6d7175" };
 const EMOJI_STYLE = { fontSize: "24px", marginBottom: "4px" };
 
 // Helper to get preview position styles
-function getPreviewPositionStyle(position: string, offsetX: number, offsetY: number) {
+function getPreviewPositionStyle(position: string | null, offsetX: number, offsetY: number) {
+  const pos = position || "bottom-right";
   return {
     position: "absolute" as const,
-    top: position.includes("top") ? `${offsetY}px` : "auto",
-    bottom: position.includes("bottom") ? `${offsetY}px` : "auto",
-    left: position.includes("left") ? `${offsetX}px` : "auto",
-    right: position.includes("right") ? `${offsetX}px` : "auto",
+    top: pos.includes("top") ? `${offsetY}px` : "auto",
+    bottom: pos.includes("bottom") ? `${offsetY}px` : "auto",
+    left: pos.includes("left") ? `${offsetX}px` : "auto",
+    right: pos.includes("right") ? `${offsetX}px` : "auto",
   };
 }
 
