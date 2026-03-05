@@ -4,6 +4,7 @@ import type {
   LoaderFunctionArgs,
 } from "react-router";
 import { useFetcher, useRouteError } from "react-router";
+import { useState } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 
@@ -178,7 +179,13 @@ export default function Plans() {
     saleDays: 90,
   };
 
+  const [requestingPlan, setRequestingPlan] = useState<string | null>(null);
   const isLoading = fetcher.state === "loading";
+
+  const handlePlanSelect = (planId: string) => {
+    setRequestingPlan(planId);
+    fetcher.submit({ planId }, { method: "post" });
+  };
 
   return (
     <s-page heading="Choose your plan">
@@ -199,7 +206,20 @@ export default function Plans() {
         </s-section>
       )}
 
-      {/* TODO: Add Plans Grid */}
+      <s-section>
+        <s-stack direction="inline" gap="base">
+          {PLANS.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              currentPlan={paid}
+              onSelect={handlePlanSelect}
+              isLoading={isLoading}
+              requestingPlan={requestingPlan}
+            />
+          ))}
+        </s-stack>
+      </s-section>
     </s-page>
   );
 }
