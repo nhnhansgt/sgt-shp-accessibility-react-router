@@ -2,10 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import type {
   HeadersFunction,
   LoaderFunctionArgs,
+  ActionFunctionArgs,
 } from "react-router";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useActionData, useNavigation, useSubmit } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
+import prisma from "~/db.server";
+import { AccessibilityRepository } from "~/repositories/accessibility.repository";
 
 // Toolbar button configuration
 interface ToolbarButton {
@@ -31,27 +34,6 @@ const TOOLBAR_BUTTONS: ToolbarButton[] = [
   { id: "link", label: "Insert Link", icon: "🔗", command: "link" },
   { id: "image", label: "Insert Image", icon: "🖼", command: "image" },
 ];
-
-// Mock data - TODO: Replace with actual data from database
-const MOCK_STATEMENT_CONTENT = `
-  <h1>Accessibility Statement</h1>
-  <p>We are committed to ensuring digital accessibility for people with disabilities. We believe the internet should be accessible to everyone, regardless of their abilities.</p>
-
-  <h2>Our Commitment</h2>
-  <p>We strive to make our website accessible to the widest possible audience, including people with visual, auditory, motor, and cognitive disabilities.</p>
-
-  <h2>Features</h2>
-  <ul>
-    <li>Font size adjustment</li>
-    <li>Screen reader compatibility</li>
-    <li>High contrast mode</li>
-    <li>Link highlighting</li>
-    <li>Keyboard navigation support</li>
-  </ul>
-
-  <h2>Conformance Status</h2>
-  <p>Our website conforms to WCAG 2.1 Level AA guidelines.</p>
-`;
 
 // Default links
 const DEFAULT_LINKS = {
@@ -152,22 +134,46 @@ const EDITOR_STYLES = `
 `;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
 
-  // TODO: Replace with actual query to get statement from database
+  const repository = new AccessibilityRepository(prisma);
+  const settings = await repository.findOrCreate(shopDomain);
+
   return {
-    content: MOCK_STATEMENT_CONTENT,
+    content: settings.statement || "",
     links: DEFAULT_LINKS,
+  };
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
+
+  const formData = await request.formData();
+  const statement = formData.get("statement") as string;
+
+  const repository = new AccessibilityRepository(prisma);
+  const updated = await repository.updateStatement(shopDomain, statement);
+
+  return {
+    success: true,
+    statement: updated.statement,
   };
 };
 
 export default function Statement() {
   const { content, links } = useLoaderData<typeof loader>();
+  const actionData = useActionData<{ success: boolean; statement: string }>();
+  const navigation = useNavigation();
+  const isSaving = navigation.state === "submitting";
 
   // State management for editor
   const [editorContent, setEditorContent] = useState(content);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Submit form using fetcher
+  const submit = useSubmit();
 
   // Inject editor styles
   useEffect(() => {
@@ -201,33 +207,37 @@ export default function Statement() {
     };
   }, [isDirty]);
 
+  // Sync editor content when loader data changes
+  useEffect(() => {
+    setEditorContent(content);
+    setIsDirty(false);
+  }, [content]);
+
+  // Show success message after save
+  useEffect(() => {
+    if (actionData?.success && !isSaving) {
+      alert("Statement saved successfully!");
+      setIsDirty(false);
+    }
+  }, [actionData, isSaving]);
+
   // Execute rich text commands
   const handleExecCommand = (command: string, arg?: string) => {
     document.execCommand(command, false, arg);
     setIsDirty(true);
   };
 
-  // Handle save
-  const handleSave = async () => {
-    setIsSaving(true);
-
-    // TODO: Replace with actual API call to save statement
-    console.log("Saving statement:", editorContent);
-
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setIsSaving(false);
-    setIsDirty(false);
-
-    // TODO: Show success toast
-    alert("Statement saved! (Mock - no backend)");
+  // Handle save using form submission
+  const handleSave = () => {
+    const formData = new FormData();
+    formData.append("statement", editorContent);
+    submit(formData, { method: "post" });
   };
 
   // Handle reset to default
   const handleReset = () => {
     if (window.confirm("Are you sure you want to reset to the default statement? All changes will be lost.")) {
-      setEditorContent(MOCK_STATEMENT_CONTENT);
+      setEditorContent(content);
       setIsDirty(false);
     }
   };
