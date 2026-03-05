@@ -10,6 +10,68 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 // Mock billing data
 const MOCK_BILLING_STATUS = null; // null = no plan, 'monthly' or 'annual' = active plan
 
+interface Plan {
+  id: "monthly" | "annual";
+  name: string;
+  price: number;
+  originalPrice?: number;
+  period: "monthly" | "annual";
+  features: string[];
+  trialDays: number;
+  isPopular?: boolean;
+}
+
+const PLANS: Plan[] = [
+  {
+    id: "monthly",
+    name: "Monthly Plan",
+    price: 6.99,
+    period: "monthly",
+    features: [
+      "Enhanced Readability",
+      "Visually Pleasing Design",
+      "Simplified Navigation",
+      "Custom Brand Integration",
+      "Premium Support",
+    ],
+    trialDays: 14,
+  },
+  {
+    id: "annual",
+    name: "Annual Plan",
+    price: 5.60,
+    originalPrice: 6.99,
+    period: "annual",
+    features: [
+      "Enhanced Readability",
+      "Visually Pleasing Design",
+      "Simplified Navigation",
+      "Custom Brand Integration",
+      "Premium Support",
+    ],
+    trialDays: 14,
+    isPopular: true,
+  },
+];
+
+const FEATURES = [
+  "Enhanced Readability",
+  "Visually Pleasing Design",
+  "Simplified Navigation",
+  "Custom Brand Integration",
+  "Premium Support",
+];
+
+function getButtonText(
+  currentPlan: string | null,
+  planPeriod: "monthly" | "annual"
+): string {
+  if (!currentPlan) return "Start free trial";
+  if (currentPlan === planPeriod) return "Current plan";
+  if (currentPlan === "monthly" && planPeriod === "annual") return "Upgrade";
+  return "Downgrade";
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
