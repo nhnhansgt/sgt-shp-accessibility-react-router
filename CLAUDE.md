@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Shopify app template built with React Router (forked from the Remix app template). It uses Polaris web components for the UI, Prisma for session storage, and the Shopify Admin GraphQL API for data operations.
 
+## Quick Start
+
+```bash
+npm install
+npm run dev            # Start dev server at http://localhost:3000
+```
+
+**Node.js:** >=20.19 <22 || >=22.12
+
 ## Development Commands
 
 ### Start Development Server
@@ -92,6 +101,20 @@ npm run graphql-codegen   # Generate TypeScript types from GraphQL schema
 
 **Node.js version:** >=20.19 <22 || >=22.12 (See `package.json` engines)
 
+## Current Routes
+
+Routes use React Router's file-based naming:
+
+- `app/routes/app.tsx` - Layout wrapper cho toàn bộ app
+- `app/routes/app._index.tsx` - Dashboard chính (`/app`)
+- `app/routes/app.statement.tsx` - Accessibility Statement editor (`/app/statement`)
+- `app/routes/app.widgets.tsx` - Widget customization screen (`/app/widgets`)
+- `app/routes/app.plans.tsx` - Trang quản lý Plans (`/app/plans`)
+- `app/routes/app.setup.tsx` - Quick Start guide (`/app/setup`)
+- `app/routes/app.additional.tsx` - Trang demo thêm (`/app/additional`)
+- `app/routes/webhooks.app.uninstalled.tsx` → Webhook handler
+- `app/routes/auth.$.tsx` → Auth route (catch-all)
+
 ## Architecture
 
 ### Directory Structure
@@ -101,17 +124,6 @@ npm run graphql-codegen   # Generate TypeScript types from GraphQL schema
 - **app/db.server.ts** - Prisma client instance
 - **prisma/schema.prisma** - Database schema (MySQL cho local development)
 - **extensions/** - Shopify app extensions (UI extensions, Functions, etc.)
-
-### Routing Pattern
-
-Routes use React Router's file-based naming:
-
-- `app/routes/app.tsx` - Layout wrapper cho toàn bộ app
-- `app/routes/app._index.tsx` - Dashboard chính (`/app`)
-- `app/routes/app.plans.tsx` - Trang quản lý Plans (`/app/plans`)
-- `app/routes/app.additional.tsx` - Trang demo thêm (`/app/additional`)
-- `app/routes/webhooks.app.uninstalled.tsx` → Webhook handler
-- `app/routes/auth.$.tsx` → Auth route (catch-all)
 
 ### Authentication Flow
 
@@ -170,6 +182,24 @@ This project includes MCP server configurations in `.mcp.json`:
 - Database migrations and schema management
 
 ## Important Patterns
+
+### Polaris Web Components Aliases
+
+The project uses shorthand aliases for Polaris components:
+
+| Alias | Component |
+|-------|-----------|
+| `<s-page>` | `<Page>` |
+| `<s-section>` | `<Section>` |
+| `<s-box>` | `<Box>` |
+| `<s-stack>` | `<Stack>` |
+| `<s-text>` | `<Text>` |
+| `<s-heading>` | `<Heading>` |
+| `<s-button>` | `<Button>` |
+| `<s-link>` | `<Link>` |
+| `<s-divider>` | `<Divider>` |
+| `<s-unordered-list>` | `<UnorderedList>` |
+| `<s-list-item>` | `<ListItem>` |
 
 ### Embedded App Navigation
 
@@ -271,3 +301,9 @@ Special rules:
 ## Docker Support
 
 The project includes a `Dockerfile` for containerized deployment. Use `npm run docker-start` to run the app in a Docker container.
+
+## Git Workflow
+
+- **Default branch:** `main`
+- **Feature commits:** Conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`)
+- **Before commit:** Run `npm run typecheck && npm run lint`
