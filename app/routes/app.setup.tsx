@@ -222,3 +222,10 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
+
+// TODO: Replace mock accessibility status with actual query from database
+// TODO: Add first-visit modal dismiss logic (persist to localStorage)
+// TODO: Implement Crisp chat integration
+// TODO: Replace external links with actual help center URLs
+// TODO: Add Japanese language support
+// TODO: Add theme editor redirect logic
