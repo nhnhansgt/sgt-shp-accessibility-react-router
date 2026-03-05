@@ -59,6 +59,98 @@ const DEFAULT_LINKS = {
   termsOfService: "https://sgt-lab.com/terms",
 };
 
+// Editor styles
+const EDITOR_CONTAINER_STYLE = {
+  borderWidth: "1px",
+  borderRadius: "8px",
+  backgroundColor: "#ffffff",
+  overflow: "hidden",
+  borderStyle: "solid",
+  borderColor: "#c9cccf",
+};
+
+const EDITOR_STYLE = {
+  padding: "16px",
+  minHeight: "400px",
+  maxHeight: "600px",
+  overflowY: "auto" as const,
+  fontSize: "16px",
+  lineHeight: 1.6,
+};
+
+// Editor content styles (injected via style tag)
+const EDITOR_STYLES = `
+  .statement-editor h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #202223;
+  }
+
+  .statement-editor h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 24px;
+    margin-bottom: 12px;
+    color: #202223;
+  }
+
+  .statement-editor h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    color: #202223;
+  }
+
+  .statement-editor p {
+    margin-bottom: 16px;
+    line-height: 1.6;
+    color: #202223;
+  }
+
+  .statement-editor ul,
+  .statement-editor ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+
+  .statement-editor li {
+    margin-bottom: 8px;
+  }
+
+  .statement-editor a {
+    color: #007ace;
+    text-decoration: underline;
+  }
+
+  .statement-editor img {
+    max-width: 100%;
+    height: auto;
+    margin: 16px 0;
+  }
+
+  .statement-editor blockquote {
+    border-left: 4px solid #c9cccf;
+    padding-left: 16px;
+    margin: 16px 0;
+    color: #6d7175;
+    font-style: italic;
+  }
+
+  .statement-editor strong {
+    font-weight: 600;
+  }
+
+  .statement-editor em {
+    font-style: italic;
+  }
+
+  .statement-editor u {
+    text-decoration: underline;
+  }
+`;
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
@@ -202,25 +294,6 @@ export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
 
-// Editor styles
-const EDITOR_CONTAINER_STYLE = {
-  borderWidth: "1px",
-  borderRadius: "8px",
-  backgroundColor: "#ffffff",
-  overflow: "hidden",
-  borderStyle: "solid",
-  borderColor: "#c9cccf",
-};
-
-const EDITOR_STYLE = {
-  padding: "16px",
-  minHeight: "400px",
-  maxHeight: "600px",
-  overflowY: "auto" as const,
-  fontSize: "16px",
-  lineHeight: 1.6,
-};
-
 // ContentEditable Editor component
 function ContentEditor({
   content,
@@ -354,76 +427,3 @@ function EditorToolbar({ onCommand }: { onCommand: (command: string, arg?: strin
 // TODO: Add focus management and screen reader announcements
 // TODO: Add image upload functionality (not just URL)
 // TODO: Add link editing (modify existing links)
-
-// Editor content styles
-const EDITOR_STYLES = `
-  .statement-editor h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: #202223;
-  }
-
-  .statement-editor h2 {
-    font-size: 22px;
-    font-weight: 600;
-    margin-top: 24px;
-    margin-bottom: 12px;
-    color: #202223;
-  }
-
-  .statement-editor h3 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-top: 20px;
-    margin-bottom: 8px;
-    color: #202223;
-  }
-
-  .statement-editor p {
-    margin-bottom: 16px;
-    line-height: 1.6;
-    color: #202223;
-  }
-
-  .statement-editor ul,
-  .statement-editor ol {
-    margin-bottom: 16px;
-    padding-left: 24px;
-  }
-
-  .statement-editor li {
-    margin-bottom: 8px;
-  }
-
-  .statement-editor a {
-    color: #007ace;
-    text-decoration: underline;
-  }
-
-  .statement-editor img {
-    max-width: 100%;
-    height: auto;
-    margin: 16px 0;
-  }
-
-  .statement-editor blockquote {
-    border-left: 4px solid #c9cccf;
-    padding-left: 16px;
-    margin: 16px 0;
-    color: #6d7175;
-    font-style: italic;
-  }
-
-  .statement-editor strong {
-    font-weight: 600;
-  }
-
-  .statement-editor em {
-    font-style: italic;
-  }
-
-  .statement-editor u {
-    text-decoration: underline;
-  }
-`;
