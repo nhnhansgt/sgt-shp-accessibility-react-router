@@ -5,11 +5,8 @@ import type {
 import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
-
-// Mock data - TODO: Replace with actual data from database
-const MOCK_ACCESSIBILITY_ENABLED = true;
-const MOCK_IS_YEAR_END_SALE = false;
-const MOCK_SALE_DAYS = 0;
+import prisma from "~/db.server";
+import { AccessibilityRepository } from "~/repositories/accessibility.repository";
 
 // Guide steps data
 interface GuideStep {
@@ -59,13 +56,16 @@ const GETTING_STARTED_STEPS: GuideStep[] = [
 ];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
 
-  // TODO: Replace with actual query to get store settings
+  const repository = new AccessibilityRepository(prisma);
+  const settings = await repository.findOrCreate(shopDomain);
+
   return {
-    isAccessibilityOn: MOCK_ACCESSIBILITY_ENABLED,
-    isYearEndSale: MOCK_IS_YEAR_END_SALE,
-    saleDays: MOCK_SALE_DAYS,
+    isAccessibilityOn: settings.status === 1,
+    isYearEndSale: false,
+    saleDays: 0,
   };
 };
 
@@ -222,10 +222,3 @@ export function ErrorBoundary() {
 export const headers: HeadersFunction = (headersArgs) => {
   return boundary.headers(headersArgs);
 };
-
-// TODO: Replace mock accessibility status with actual query from database
-// TODO: Add first-visit modal dismiss logic (persist to localStorage)
-// TODO: Implement Crisp chat integration
-// TODO: Replace external links with actual help center URLs
-// TODO: Add Japanese language support
-// TODO: Add theme editor redirect logic
