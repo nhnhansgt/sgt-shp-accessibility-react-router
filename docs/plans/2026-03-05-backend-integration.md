@@ -10,7 +10,8 @@
 
 **Key Constraints:**
 - Use existing `accessibilities` table schema (NO migrations)
-- Query using `shop` column (e.g., "store.myshopify.com")
+- Query using `shop` column only (e.g., "store.myshopify.com")
+- `app_id` column exists in database but NOT used in application logic (kept for legacy compatibility)
 - Soft delete support via `deleted_at` column
 - Application-layer validation with Zod
 
@@ -42,10 +43,9 @@ export class AccessibilityRepository {
   /**
    * Find accessibility settings by shop domain
    */
-  async findByShopDomain(shopDomain: string, appId: number): Promise<Accessibility | null> {
+  async findByShopDomain(shopDomain: string): Promise<Accessibility | null> {
     return this.db.accessibilities.findFirst({
       where: {
-        app_id: BigInt(appId),
         shop: shopDomain,
         deleted_at: null,
       },
@@ -55,17 +55,17 @@ export class AccessibilityRepository {
   /**
    * Get or create accessibility record for a shop
    */
-  async findOrCreate(shopDomain: string, appId: number): Promise<Accessibility> {
-    const existing = await this.findByShopDomain(shopDomain, appId);
+  async findOrCreate(shopDomain: string): Promise<Accessibility> {
+    const existing = await this.findByShopDomain(shopDomain);
 
     if (existing) {
       return existing;
     }
 
     // Create new record with defaults
+    // Note: app_id is kept null for legacy compatibility
     return this.db.accessibilities.create({
       data: {
-        app_id: BigInt(appId),
         shop: shopDomain,
         status: 0,
         icon: 'icon-circle',
@@ -83,10 +83,9 @@ export class AccessibilityRepository {
    */
   async updateWidgetSettings(
     shopDomain: string,
-    appId: number,
     settings: Partial<AccessibilitySettings>
   ): Promise<Accessibility> {
-    const record = await this.findByShopDomain(shopDomain, appId);
+    const record = await this.findByShopDomain(shopDomain);
     if (!record) {
       throw new Error('Accessibility record not found');
     }
@@ -112,10 +111,9 @@ export class AccessibilityRepository {
    */
   async updateStatement(
     shopDomain: string,
-    appId: number,
     statement: string
   ): Promise<Accessibility> {
-    const record = await this.findByShopDomain(shopDomain, appId);
+    const record = await this.findByShopDomain(shopDomain);
     if (!record) {
       throw new Error('Accessibility record not found');
     }
@@ -132,8 +130,8 @@ export class AccessibilityRepository {
   /**
    * Enable/disable accessibility widget
    */
-  async setStatus(shopDomain: string, appId: number, status: 0 | 1): Promise<Accessibility> {
-    const record = await this.findByShopDomain(shopDomain, appId);
+  async setStatus(shopDomain: string, status: 0 | 1): Promise<Accessibility> {
+    const record = await this.findByShopDomain(shopDomain);
     if (!record) {
       throw new Error('Accessibility record not found');
     }
@@ -283,49 +281,7 @@ git commit -m "feat: add TypeScript types for Accessibility"
 
 ---
 
-## Task 3: Create Config Utility for App ID
-
-**Files:**
-- Create: `app/utils/config.ts`
-
-**Step 1: Create utils directory**
-
-```bash
-mkdir -p app/utils
-```
-
-**Step 2: Create config utility**
-
-Create `app/utils/config.ts`:
-
-```typescript
-/**
- * Get App ID from environment or Shopify config
- * This should match the app_id used in the accessibilities table
- */
-export function getAppIdFromConfig(): number {
-  // TODO: Replace with actual App ID from Shopify config or environment
-  // For now, return a placeholder value
-  const appId = process.env.SHOPIFY_APP_ID || '1';
-  return parseInt(appId, 10);
-}
-```
-
-**Step 3: Verify TypeScript compiles**
-
-Run: `npm run typecheck`
-Expected: No errors
-
-**Step 4: Commit**
-
-```bash
-git add app/utils/config.ts
-git commit -m "feat: add config utility for App ID"
-```
-
----
-
-## Task 4: Update app.widgets.tsx - Connect to Database
+## Task 3: Update app.widgets.tsx - Connect to Database
 
 **Files:**
 - Modify: `app/routes/app.widgets.tsx`
@@ -337,8 +293,7 @@ Add at top of `app/widgets.tsx`:
 ```typescript
 import { prisma } from '~/db.server';
 import { AccessibilityRepository } from '~/repositories/accessibility.repository';
-import { getAppIdFromConfig } from '~/utils/config';
-import type { ActionFunctionArgs } from 'react-router';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { json } from 'react-router';
 ```
 
@@ -350,10 +305,9 @@ Replace the loader:
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const repository = new AccessibilityRepository(prisma);
-  const settings = await repository.findOrCreate(shopDomain, appId);
+  const settings = await repository.findOrCreate(shopDomain);
 
   return {
     isYearEndSale: false,
@@ -374,7 +328,6 @@ Replace the action and handleSave logic. Add new action:
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const formData = await request.formData();
   const settings = {
@@ -384,7 +337,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   };
 
   const repository = new AccessibilityRepository(prisma);
-  const updated = await repository.updateWidgetSettings(shopDomain, appId, settings);
+  const updated = await repository.updateWidgetSettings(shopDomain, settings);
 
   return json({
     success: true,
@@ -426,7 +379,7 @@ git commit -m "feat: connect Widgets screen to database via repository"
 
 ---
 
-## Task 5: Update app.statement.tsx - Connect to Database
+## Task 4: Update app.statement.tsx - Connect to Database
 
 **Files:**
 - Modify: `app/routes/app.statement.tsx`
@@ -438,8 +391,7 @@ Add at top of `app/statement.tsx`:
 ```typescript
 import { prisma } from '~/db.server';
 import { AccessibilityRepository } from '~/repositories/accessibility.repository';
-import { getAppIdFromConfig } from '~/utils/config';
-import type { ActionFunctionArgs } from 'react-router';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { json } from 'react-router';
 ```
 
@@ -451,10 +403,9 @@ Replace loader:
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const repository = new AccessibilityRepository(prisma);
-  const settings = await repository.findOrCreate(shopDomain, appId);
+  const settings = await repository.findOrCreate(shopDomain);
 
   return {
     content: settings.statement || '',
@@ -471,13 +422,12 @@ Add after loader:
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const formData = await request.formData();
   const statement = formData.get('statement') as string;
 
   const repository = new AccessibilityRepository(prisma);
-  const updated = await repository.updateStatement(shopDomain, appId, statement);
+  const updated = await repository.updateStatement(shopDomain, statement);
 
   return json({
     success: true,
@@ -504,7 +454,7 @@ git commit -m "feat: connect Statement screen to database via repository"
 
 ---
 
-## Task 6: Update app.setup.tsx - Connect to Database
+## Task 5: Update app.setup.tsx - Connect to Database
 
 **Files:**
 - Modify: `app/routes/app.setup.tsx`
@@ -514,7 +464,7 @@ git commit -m "feat: connect Statement screen to database via repository"
 ```typescript
 import { prisma } from '~/db.server';
 import { AccessibilityRepository } from '~/repositories/accessibility.repository';
-import { getAppIdFromConfig } from '~/utils/config';
+import type { LoaderFunctionArgs } from 'react-router';
 ```
 
 **Step 2: Update loader**
@@ -525,10 +475,9 @@ Replace loader:
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const repository = new AccessibilityRepository(prisma);
-  const settings = await repository.findOrCreate(shopDomain, appId);
+  const settings = await repository.findOrCreate(shopDomain);
 
   return {
     isAccessibilityOn: settings.status === 1,
@@ -552,7 +501,7 @@ git commit -m "feat: connect Setup screen to database via repository"
 
 ---
 
-## Task 7: Update app.support.tsx - Check Billing Status
+## Task 6: Update app.support.tsx - Check Billing Status
 
 **Files:**
 - Modify: `app/routes/app.support.tsx`
@@ -562,7 +511,7 @@ git commit -m "feat: connect Setup screen to database via repository"
 ```typescript
 import { prisma } from '~/db.server';
 import { AccessibilityRepository } from '~/repositories/accessibility.repository';
-import { getAppIdFromConfig } from '~/utils/config';
+import type { LoaderFunctionArgs } from 'react-router';
 ```
 
 **Step 2: Update loader**
@@ -573,10 +522,9 @@ Replace loader:
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
-  const appId = getAppIdFromConfig();
 
   const repository = new AccessibilityRepository(prisma);
-  const settings = await repository.findOrCreate(shopDomain, appId);
+  const settings = await repository.findOrCreate(shopDomain);
 
   return {
     isYearEndSale: false,
@@ -607,7 +555,7 @@ git commit -m "feat: connect Support screen to database via repository"
 
 ---
 
-## Task 8: Create Public API Endpoint
+## Task 7: Create Public API Endpoint
 
 **Files:**
 - Create: `app/routes/api.accessibilities.$shop.tsx`
@@ -620,7 +568,6 @@ Create `app/routes/api.accessibilities.$shop.tsx`:
 import type { LoaderFunctionArgs } from 'react-router';
 import { json } from 'react-router';
 import { prisma } from '~/db.server';
-import { getAppIdFromConfig } from '~/utils/config';
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const { shop } = params;
@@ -630,11 +577,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   }
 
   try {
-    const appId = getAppIdFromConfig();
-
     const accessibility = await prisma.accessibilities.findFirst({
       where: {
-        app_id: BigInt(appId),
         shop: shop,
         status: 1, // Only return enabled widgets
         deleted_at: null,
@@ -689,7 +633,7 @@ git commit -m "feat: add public API endpoint for theme extension"
 
 ---
 
-## Task 9: Add Input Validation with Zod
+## Task 8: Add Input Validation with Zod
 
 **Files:**
 - Create: `app/validators/accessibility.validator.ts`
@@ -769,7 +713,7 @@ git commit -m "feat: add Zod validation for widget settings"
 
 ---
 
-## Task 10: Final Verification and Testing
+## Task 9: Final Verification and Testing
 
 **Files:**
 - All modified route files
@@ -813,7 +757,7 @@ git commit -m "feat: complete backend integration for all screens"
 
 ---
 
-## Task 11: Update Documentation
+## Task 10: Update Documentation
 
 **Files:**
 - Modify: `docs/architecture-analysis.md`
@@ -860,7 +804,6 @@ git commit -m "docs: update implementation status"
 
 - [ ] Repository created and exports all methods
 - [ ] Types file created with all interfaces
-- [ ] Config utility returns App ID
 - [ ] Widgets screen loads settings from DB
 - [ ] Widgets screen saves settings to DB
 - [ ] Statement screen loads HTML from DB
@@ -894,11 +837,8 @@ app/
 ├── types/
 │   └── accessibility.ts               # NEW
 │
-├── validators/
-│   └── accessibility.validator.ts     # NEW
-│
-└── utils/
-    └── config.ts                      # NEW
+└── validators/
+    └── accessibility.validator.ts     # NEW
 ```
 
 ---
@@ -907,6 +847,6 @@ app/
 
 - **Billing functionality** remains mocked - to be implemented when Shopify Billing API integration is needed
 - **Soft delete** is respected in all queries (`deleted_at: null`)
-- **App ID** should be configured via environment variable `SHOPIFY_APP_ID`
+- **app_id column** exists in database but is NOT used in application logic (legacy compatibility)
 - **Japanese language support** (i18n) is out of scope for this integration
 - **Crisp chat integration** in Support screen remains TODO
