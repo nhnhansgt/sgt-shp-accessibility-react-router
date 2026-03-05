@@ -9,6 +9,7 @@ import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { AccessibilityRepository } from "~/repositories/accessibility.repository";
+import { SaleBanner } from "~/components/sale-banner";
 import type { AccessibilityOptions, WidgetIcon, WidgetPosition } from "~/types/accessibility";
 
 // Widget icon options
@@ -159,22 +160,7 @@ export default function Widgets() {
   return (
     <s-page heading="Customize Your Widget">
       {/* Year End Sale Banner (conditional) */}
-      {isYearEndSale && (
-        <s-section>
-          <s-box
-            padding="base"
-            background="subdued"
-            borderRadius="base"
-          >
-            <s-stack direction="inline" gap="base">
-              <span>🎉</span>
-              <s-text>
-                Year End Sale! Get <strong>{saleDays} days</strong> free trial instead of 14!
-              </s-text>
-            </s-stack>
-          </s-box>
-        </s-section>
-      )}
+      {isYearEndSale && <SaleBanner saleDays={saleDays} />}
 
       {/* Two-column layout */}
       <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>

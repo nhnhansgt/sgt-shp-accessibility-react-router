@@ -1,6 +1,14 @@
 import type { WidgetIcon, WidgetPosition, AccessibilityOptions } from '~/types/accessibility';
 
 /**
+ * Accessibility status enum
+ */
+export enum AccessibilityStatus {
+  DISABLED = 0,
+  ENABLED = 1,
+}
+
+/**
  * Default widget icon
  */
 export const DEFAULT_ICON: WidgetIcon = 'icon-circle';
