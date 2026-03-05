@@ -72,6 +72,80 @@ function getButtonText(
   return "Downgrade";
 }
 
+interface PlanCardProps {
+  plan: Plan;
+  currentPlan: string | null;
+  onSelect: (planId: string) => void;
+  isLoading: boolean;
+  requestingPlan: string | null;
+}
+
+function PlanCard({
+  plan,
+  currentPlan,
+  onSelect,
+  isLoading,
+  requestingPlan,
+}: PlanCardProps) {
+  const isCurrentPlan = currentPlan === plan.id;
+  const isRequesting = requestingPlan === plan.id;
+
+  return (
+    <s-box
+      padding="base"
+      borderWidth="base"
+      borderRadius="base"
+      background="subdued"
+    >
+      {plan.isPopular && (
+        <s-section>
+          <s-stack direction="inline" gap="base">
+            <s-badge>Best Value</s-badge>
+          </s-stack>
+        </s-section>
+      )}
+
+      <s-stack direction="block" gap="base">
+        <s-heading>{plan.name}</s-heading>
+
+        <s-stack direction="inline" gap="base">
+          <s-text>
+            ${plan.price}
+          </s-text>
+          <s-text color="subdued">
+            /{plan.period === "annual" ? "month (billed annually)" : "month"}
+          </s-text>
+        </s-stack>
+
+        {plan.originalPrice && (
+          <s-text color="subdued">
+            Was ${plan.originalPrice}/month
+          </s-text>
+        )}
+
+        <s-text>
+          {plan.trialDays}-day free trial
+        </s-text>
+
+        <s-unordered-list>
+          {plan.features.map((feature) => (
+            <s-list-item key={feature}>{feature}</s-list-item>
+          ))}
+        </s-unordered-list>
+
+        <s-button
+          variant={plan.isPopular ? "primary" : "secondary"}
+          onClick={() => onSelect(plan.id)}
+          loading={isRequesting}
+          disabled={isCurrentPlan}
+        >
+          {getButtonText(currentPlan, plan.id)}
+        </s-button>
+      </s-stack>
+    </s-box>
+  );
+}
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
