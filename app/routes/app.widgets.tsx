@@ -30,6 +30,26 @@ const MOCK_WIDGET_SETTINGS = {
   options: DEFAULT_WIDGET_OPTIONS,
 };
 
+// Widget icon options
+interface IconOption {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
+const ICON_OPTIONS: IconOption[] = [
+  { id: "icon-circle", label: "Circle", emoji: "⭕" },
+  { id: "icon-wheelchair", label: "Wheelchair", emoji: "♿" },
+  { id: "icon-eye", label: "Eye", emoji: "👁" },
+  { id: "icon-star", label: "Star", emoji: "⭐" },
+  { id: "icon-gear", label: "Gear", emoji: "⚙️" },
+  { id: "icon-universal", label: "Universal", emoji: "🌐" },
+  { id: "icon-palette", label: "Palette", emoji: "🎨" },
+  { id: "icon-chat", label: "Chat", emoji: "💬" },
+  { id: "icon-blind", label: "Blind", emoji: "🦯" },
+  { id: "icon-hearing", label: "Hearing", emoji: "👂" },
+];
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
@@ -44,9 +64,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function Widgets() {
   const { isYearEndSale, saleDays, settings } = useLoaderData<typeof loader>();
 
+  // State management for widget settings
+  const [selectedIcon, setSelectedIcon] = useState(settings.icon);
+
   return (
     <s-page heading="Customize Your Widget">
-      {/* TODO: Add content */}
+      {/* Year End Sale Banner (conditional) */}
+      {isYearEndSale && (
+        <s-section>
+          <s-box
+            padding="base"
+            background="subdued"
+            borderRadius="base"
+          >
+            <s-stack direction="inline" gap="base">
+              <span>🎉</span>
+              <s-text>
+                Year End Sale! Get <strong>{saleDays} days</strong> free trial instead of 14!
+              </s-text>
+            </s-stack>
+          </s-box>
+        </s-section>
+      )}
+
+      {/* Widget Icon Section */}
+      <s-section heading="Widget Icon">
+        <s-stack direction="inline" gap="base">
+          {ICON_OPTIONS.map((icon) => (
+            <s-box
+              key={icon.id}
+              padding="base"
+              borderWidth="base"
+              borderColor={selectedIcon === icon.id ? "border" : "subdued"}
+              borderRadius="base"
+              background={selectedIcon === icon.id ? "subdued" : "subdued"}
+              cursor="pointer"
+              onClick={() => setSelectedIcon(icon.id)}
+              aria-label={`Select ${icon.label} icon`}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  setSelectedIcon(icon.id);
+                }
+              }}
+            >
+              <s-stack direction="block" gap="base">
+                <span style={{ fontSize: "24px" }}>{icon.emoji}</span>
+                <s-text>{icon.label}</s-text>
+              </s-stack>
+            </s-box>
+          ))}
+        </s-stack>
+      </s-section>
     </s-page>
   );
 }
