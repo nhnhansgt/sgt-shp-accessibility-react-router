@@ -422,18 +422,6 @@ function EditorToolbar({ onCommand }: { onCommand: (command: string, arg?: strin
   );
 }
 
-// TODO: Replace mock content with actual query from database
-// TODO: Implement actual save functionality with API call
-// TODO: Add success/error toast notifications using Shopify toast API
 // TODO: Add Japanese language support (i18n)
 // TODO: Implement auto-save functionality with debounce
 // TODO: Add character/word count display
-// TODO: Add statement preview in new window/tab
-// TODO: Implement version history/undo functionality
-// TODO: Add HTML sanitization before saving
-// TODO: Add validation for statement content (min length, required sections)
-// TODO: Add Draft.js or TipTap integration for better rich text editing
-// TODO: Add keyboard shortcuts (Ctrl+S for save, Ctrl+Z for undo)
-// TODO: Add focus management and screen reader announcements
-// TODO: Add image upload functionality (not just URL)
-// TODO: Add link editing (modify existing links)
