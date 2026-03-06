@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type {
   HeadersFunction,
   LoaderFunctionArgs,
@@ -10,7 +10,9 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
 import { AccessibilityRepository } from "~/repositories/accessibility.repository";
 import { SaleBanner } from "~/components/sale-banner";
-import type { AccessibilityOptions, WidgetIcon, WidgetPosition } from "~/types/accessibility";
+import type { AccessibilityOptions, WidgetIcon, WidgetPosition, FontOption as FontOptionType } from "~/types/accessibility";
+import { validateAccessibilitySettings } from "~/validators/accessibility.validator";
+import { parseJson } from "~/utils/json.utils";
 
 // Widget icon options
 interface IconOption {
@@ -46,13 +48,13 @@ const POSITION_OPTIONS: PositionOption[] = [
 ];
 
 // Font options (ID maps to font family)
-interface FontOption {
+interface FontOptionDef {
   id: string;
   label: string;
   family: string;
 }
 
-const FONT_OPTIONS: FontOption[] = [
+const FONT_OPTIONS: FontOptionDef[] = [
   { id: "0", label: "Lobster", family: "Lobster, cursive" },
   { id: "1", label: "Dancing Script", family: "'Dancing Script', cursive" },
   { id: "2", label: "Lato", family: "Lato, sans-serif" },
@@ -78,7 +80,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     saleDays: 0,
     settings: {
       ...settings,
-      options: settings.options ? JSON.parse(settings.options as string) : {},
+      options: parseJson<AccessibilityOptions>(settings.options as string, {
+        color: "#ffffff",
+        size: "24",
+        background_color: "#FA6E0A",
+        offsetX: 10,
+        offsetY: 10,
+        locale: "en",
+        theme_bg_color: "#FA6E0A",
+        font: "8",
+      }),
     },
   };
 };
@@ -94,6 +105,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     options: JSON.parse(formData.get("options") as string || "{}") as AccessibilityOptions,
   };
 
+  // Validate settings with Zod
+  const validation = validateAccessibilitySettings(settings);
+  if (!validation.success) {
+    return new Response(JSON.stringify({ errors: validation.error.flatten() }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const repository = new AccessibilityRepository(prisma);
   await repository.updateWidgetSettings(shopDomain, settings);
 
@@ -105,20 +125,15 @@ export default function Widgets() {
   const fetcher = useFetcher();
 
   // State management for widget settings
-  const [selectedIcon, setSelectedIcon] = useState(settings.icon);
-  const [selectedPosition, setSelectedPosition] = useState(settings.position);
+  const [selectedIcon, setSelectedIcon] = useState<WidgetIcon | null>(settings.icon as WidgetIcon | null);
+  const [selectedPosition, setSelectedPosition] = useState<WidgetPosition | null>(settings.position as WidgetPosition | null);
   const [widgetSize, setWidgetSize] = useState(Number(settings.options.size));
   const [offsetX, setOffsetX] = useState(settings.options.offsetX);
   const [offsetY, setOffsetY] = useState(settings.options.offsetY);
   const [iconColor, setIconColor] = useState(settings.options.color);
   const [backgroundColor, setBackgroundColor] = useState(settings.options.background_color);
   const [themeBgColor, setThemeBgColor] = useState(settings.options.theme_bg_color);
-  const [selectedFont, setSelectedFont] = useState(settings.options.font);
-
-  // Sync state after successful save
-  useEffect(() => {
-    // Data will be reloaded by loader after redirect
-  }, [fetcher.state]);
+  const [selectedFont, setSelectedFont] = useState<FontOptionType>(settings.options.font);
 
   // Handle save using fetcher
   const handleSave = () => {
@@ -144,15 +159,15 @@ export default function Widgets() {
 
   // Handle reset to defaults
   const handleReset = () => {
-    setSelectedIcon("icon-circle");
-    setSelectedPosition("bottom-right");
+    setSelectedIcon("icon-circle" as WidgetIcon);
+    setSelectedPosition("bottom-right" as WidgetPosition);
     setWidgetSize(24);
     setOffsetX(10);
     setOffsetY(10);
     setIconColor("#ffffff");
     setBackgroundColor("#FA6E0A");
     setThemeBgColor("#FA6E0A");
-    setSelectedFont("8");
+    setSelectedFont("8" as FontOptionType);
   };
 
   const isSaving = fetcher.state !== "idle";
@@ -175,7 +190,7 @@ export default function Widgets() {
                   key={icon.id}
                   id={icon.id}
                   isSelected={selectedIcon === icon.id}
-                  onClick={() => setSelectedIcon(icon.id)}
+                  onClick={() => setSelectedIcon(icon.id as WidgetIcon)}
                   ariaLabel={`Select ${icon.label} icon`}
                 >
                   <div style={EMOJI_STYLE}>{icon.emoji}</div>
@@ -194,7 +209,7 @@ export default function Widgets() {
                   key={position.id}
                   id={position.id}
                   isSelected={selectedPosition === position.id}
-                  onClick={() => setSelectedPosition(position.id)}
+                  onClick={() => setSelectedPosition(position.id as WidgetPosition)}
                   ariaLabel={`Set position to ${position.label}`}
                   minWidth="100px"
                 >
@@ -263,7 +278,7 @@ export default function Widgets() {
             <div style={{ marginBottom: "16px" }}>
               <select
                 value={selectedFont}
-                onChange={(e) => setSelectedFont(e.target.value)}
+                onChange={(e) => setSelectedFont(e.target.value as FontOptionType)}
                 aria-label="Select font"
                 style={{
                   padding: "8px 12px",
@@ -372,7 +387,7 @@ export default function Widgets() {
                     Accessibility Options
                   </strong>
                 </div>
-                <FontPreviewText fontId={selectedFont}>
+                <FontPreviewText fontId={selectedFont as string}>
                   <div style={{ marginBottom: "4px" }}>Font Size: A A A</div>
                   <div>Contrast: ○ ○ ○</div>
                 </FontPreviewText>

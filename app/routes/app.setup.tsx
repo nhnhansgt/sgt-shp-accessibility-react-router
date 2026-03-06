@@ -3,6 +3,7 @@ import type {
   LoaderFunctionArgs,
 } from "react-router";
 import { useLoaderData } from "react-router";
+import { useState, useEffect } from "react";
 import { authenticate } from "../shopify.server";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import prisma from "~/db.server";
@@ -57,6 +58,41 @@ const GETTING_STARTED_STEPS: GuideStep[] = [
   },
 ];
 
+// Welcome modal slides
+interface WelcomeSlide {
+  title: string;
+  description: string;
+  icon: string;
+}
+
+const SLIDES: WelcomeSlide[] = [
+  {
+    title: "Welcome",
+    description: "Make your store accessible to everyone",
+    icon: "♿",
+  },
+  {
+    title: "Customize",
+    description: "Personalize your widget to match your brand",
+    icon: "🎨",
+  },
+  {
+    title: "Statement",
+    description: "Create a WCAG compliant accessibility statement",
+    icon: "📄",
+  },
+  {
+    title: "Support",
+    description: "We're here to help 24/7",
+    icon: "💬",
+  },
+  {
+    title: "Ready",
+    description: "Start your 14-day free trial today!",
+    icon: "🚀",
+  },
+];
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
@@ -73,6 +109,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function Setup() {
   const { isAccessibilityOn, isYearEndSale, saleDays } = useLoaderData<typeof loader>();
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Check if first visit
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem("hasSeenOnboarding");
+    if (!hasSeenOnboarding) {
+      setShowWelcomeModal(true);
+      localStorage.setItem("hasSeenOnboarding", "true");
+    }
+  }, []);
+
+  // Auto-slide functionality
+  useEffect(() => {
+    if (!showWelcomeModal) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 5000); // 5 seconds per slide
+
+    return () => clearInterval(interval);
+  }, [showWelcomeModal]);
 
   return (
     <s-page heading="Quick Start">
@@ -90,7 +148,13 @@ export default function Setup() {
                 ? "Accessibility is enabled"
                 : "Accessibility is not enabled"}
             </s-text>
-            <s-button variant="secondary">
+            <s-button
+              variant="secondary"
+              onClick={() => {
+                // Open Shopify Theme Editor in new tab
+                window.open("/admin/themes/current/editor", "_blank");
+              }}
+            >
               Open Theme Editor
             </s-button>
           </s-stack>
@@ -198,6 +262,95 @@ export default function Setup() {
           </s-stack>
         </s-box>
       </s-section>
+
+      {/* Welcome Modal for First-Time Users */}
+      {showWelcomeModal && (
+        <s-section>
+          <div
+            role="button"
+            tabIndex={0}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0, 0, 0, 0.5)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+            onClick={() => setShowWelcomeModal(false)}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setShowWelcomeModal(false);
+              }
+            }}
+            aria-label="Close welcome modal"
+          >
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+            <div
+              style={{
+                maxWidth: "400px",
+                width: "100%",
+              }}
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="welcome-modal-title"
+              tabIndex={-1}
+            >
+              <s-box
+                padding="base"
+                background="subdued"
+                borderRadius="base"
+              >
+                <s-stack direction="block" gap="base">
+                  <s-heading id="welcome-modal-title">{SLIDES[currentSlide].title}</s-heading>
+                  <s-paragraph>{SLIDES[currentSlide].description}</s-paragraph>
+                  <div style={{ fontSize: "64px" }}>{SLIDES[currentSlide].icon}</div>
+
+                  {/* Dots indicator */}
+                  <s-stack direction="inline" gap="base">
+                    {SLIDES.map((_, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "4px",
+                          backgroundColor: index === currentSlide ? "#008060" : "#dcdcdc",
+                        }}
+                      />
+                    ))}
+                  </s-stack>
+
+                  <s-button
+                    variant="primary"
+                    onClick={() => {
+                      if (currentSlide === SLIDES.length - 1) {
+                        setShowWelcomeModal(false);
+                      } else {
+                        setCurrentSlide((prev) => prev + 1);
+                      }
+                    }}
+                  >
+                    {currentSlide === SLIDES.length - 1 ? "Get Started" : "Next"}
+                  </s-button>
+                </s-stack>
+              </s-box>
+            </div>
+          </div>
+        </s-section>
+      )}
     </s-page>
   );
 }

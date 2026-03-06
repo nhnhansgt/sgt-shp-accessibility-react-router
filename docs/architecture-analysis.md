@@ -513,32 +513,36 @@ docs/
 
 ### Phase 1: Core Infrastructure (Week 1)
 - [x] Add `shop` column to accessibilities table
-- [ ] Create `repositories/accessibility.repository.ts`
-- [ ] Create `validators/accessibility.validator.ts`
-- [ ] Update `app.tsx` with navigation
+- [x] Create `repositories/accessibility.repository.ts`
+- [x] Create `validators/accessibility.validator.ts`
+- [x] Update `app.tsx` with navigation
+- [x] Create `constants/billing.mock.ts` with TODO variables
 
 ### Phase 2: Setup Page (Week 1-2)
-- [ ] Implement `app.setup.tsx` route
-- [ ] Create welcome/onboarding UI
-- [ ] Implement status banner
-- [ ] Add Crisp chat integration
+- [x] Implement `app.setup.tsx` route
+- [x] Connect to database via repository
+- [x] Add welcome modal for first-time users
+- [x] Add Theme Editor link
+- [x] Remove Crisp chat integration from plans
+
+### Phase 3: Entry Route & Navigation (Week 2)
+- [x] Add billing-based redirect in `app._index.tsx`
+- [x] Create `app.ExitIframe.tsx` route
+- [x] Add dynamic navigation based on billing status (mock variable)
 
 ### Phase 4: Widgets Page (Week 2-3)
-- [ ] Implement `app.widgets.tsx` route
-- [ ] Create all widget configuration components
-- [ ] Implement live preview with CSS custom props
-- [ ] Save via Repository
+- [x] Implement `app.widgets.tsx` route
+- [x] Connect to database via repository
+- [x] Add Zod validation
 
 ### Phase 5: Statement Page (Week 3)
-- [ ] Implement `app.statement.tsx` route
-- [ ] Integrate rich text editor
-- [ ] Load/save statement via Repository
+- [x] Implement `app.statement.tsx` route
+- [x] Connect to database via repository
 
 ### Phase 6: Support & Public API (Week 3-4)
-- [ ] Implement `app.support.tsx` route
-- [ ] Create `api.accessibilities.$shop.tsx` public endpoint
-- [ ] Add ExitIframe redirect handler
-- [ ] Error handling and testing
+- [x] Implement `app.support.tsx` route
+- [x] Connect to database via repository
+- [x] Create `api.accessibilities.$shop.tsx` public endpoint
 
 ---
 
